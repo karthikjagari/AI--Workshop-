@@ -4,7 +4,7 @@
  * ============================================================================
  * Instructions:
  * 1. Open your Google Sheet linked to the Google Form:
- *    https://docs.google.com/forms/d/e/1FAIpQLSeSSeHoAGLnqiCyKDJikSelyQiEQVtUY-c4Ah4sQtiE7iSjbQ/viewform
+ *    https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform
  * 2. In Google Sheets, click Extensions > Apps Script.
  * 3. Replace all existing code with this file.
  * 4. Update the LANDING_PAGE_URL below with your actual deployed website URL.

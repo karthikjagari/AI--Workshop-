@@ -114,7 +114,7 @@ function initFaqAccordion() {
 }
 
 // Official Google Form Registration URL
-const OFFICIAL_GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSSeHoAGLnqiCyKDJikSelyQiEQVtUY-c4Ah4sQtiE7iSjbQ/viewform';
+const OFFICIAL_GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform';
 
 // Global student registration state (populated strictly from verified registration response)
 const registeredStudentState = {
