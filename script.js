@@ -843,8 +843,19 @@ function initMobileScrollPopups() {
   }
 
   if (ctaBtn1) {
-    ctaBtn1.addEventListener('click', () => {
+    ctaBtn1.addEventListener('click', (e) => {
+      e.preventDefault();
       closePopup1();
+      const curriculumSection = document.getElementById('curriculum');
+      if (curriculumSection) {
+        const headerOffset = 70;
+        const elementPosition = curriculumSection.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth'
+        });
+      }
     });
   }
 
