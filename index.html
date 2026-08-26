@@ -10,6 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
+
+
 <body>
 
   <!-- =========================================================================
@@ -1078,5 +1081,49 @@
 
   <script src="qr-engine.js?v=2026"></script>
   <script src="script.js?v=2026"></script>
+
+  <!-- UTM Source Channel Tracking & Form URL Dynamic Rewriter -->
+  <script>
+  (function () {
+    var FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform";
+    var ENTRY_ID = "entry.936809235"; // Source field entry ID
+    // Map raw utm_source values (lowercase, as they appear in the shared link) to clean channel names.
+    // Add / edit entries freely — the sheet-side script will create a tab for whatever value lands here.
+    var CHANNEL_MAP = {
+      "im": "IM",
+      "dm": "DM",
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram",
+      "principal": "Principal",
+      "teacher": "Teachers",
+      "collegedost": "College_dost",
+      "ambassador": "AI_Ambassadors"
+    };
+    function getChannel() {
+      var params = new URLSearchParams(window.location.search);
+      var source = params.get("utm_source");
+      if (!source) return "Direct";
+      source = source.toLowerCase().trim();
+      return CHANNEL_MAP[source] || source; // unmapped sources still pass through as-is
+    }
+    function buildFormUrl() {
+      var url = new URL(FORM_BASE);
+      url.searchParams.set("usp", "pp_url");
+      url.searchParams.set(ENTRY_ID, getChannel());
+      return url.toString();
+    }
+    function rewriteFormLinks() {
+      var target = buildFormUrl();
+      document.querySelectorAll('a[href*="docs.google.com/forms"]').forEach(function (link) {
+        link.setAttribute("href", target);
+      });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", rewriteFormLinks);
+    } else {
+      rewriteFormLinks();
+    }
+  })();
+  </script>
 </body>
 </html>
