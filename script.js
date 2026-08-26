@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWhatsAppShare();
   initInteractiveHeroDemo();
   initHorizontalCurriculumSlider();
-  initMobileAttentionMoments();
+  initMobileScrollPopups();
 });
 
 // 1. Sticky Header Scroll Indicator
@@ -805,11 +805,124 @@ function initHorizontalCurriculumSlider() {
   updateActiveState(0);
 }
 
-// Mobile-Only Attention Moments (Ensures 100% immediate mobile visibility)
-function initMobileAttentionMoments() {
-  const attentionMoments = document.querySelectorAll('.mobile-attention-moment');
-  if (!attentionMoments.length) return;
-  attentionMoments.forEach(el => el.classList.add('in-view'));
+// Mobile-Only Scroll Popups (Triggered naturally on scroll < 768px)
+function initMobileScrollPopups() {
+  const popup1 = document.getElementById('mobile-popup-1');
+  const popup2 = document.getElementById('mobile-popup-2');
+  const closeBtn1 = document.getElementById('btn-close-popup-1');
+  const closeBtn2 = document.getElementById('btn-close-popup-2');
+  const dismissBtn1 = document.getElementById('btn-dismiss-popup-1');
+  const dismissBtn2 = document.getElementById('btn-dismiss-popup-2');
+  const ctaBtn1 = document.getElementById('btn-popup-1-cta');
+  const ctaBtn2 = document.getElementById('btn-popup-2-cta');
+
+  const closePopup1 = () => {
+    if (popup1) popup1.classList.remove('open');
+    sessionStorage.setItem('popup_1_shown', 'true');
+  };
+
+  const closePopup2 = () => {
+    if (popup2) popup2.classList.remove('open');
+    sessionStorage.setItem('popup_2_shown', 'true');
+  };
+
+  if (closeBtn1) closeBtn1.addEventListener('click', closePopup1);
+  if (closeBtn2) closeBtn2.addEventListener('click', closePopup2);
+  if (dismissBtn1) dismissBtn1.addEventListener('click', closePopup1);
+  if (dismissBtn2) dismissBtn2.addEventListener('click', closePopup2);
+
+  if (popup1) {
+    popup1.addEventListener('click', (e) => {
+      if (e.target === popup1) closePopup1();
+    });
+  }
+  if (popup2) {
+    popup2.addEventListener('click', (e) => {
+      if (e.target === popup2) closePopup2();
+    });
+  }
+
+  if (ctaBtn1) {
+    ctaBtn1.addEventListener('click', () => {
+      closePopup1();
+    });
+  }
+
+  if (ctaBtn2) {
+    ctaBtn2.addEventListener('click', () => {
+      closePopup2();
+    });
+  }
+
+  // Exact Trigger Elements:
+  // 1. Bottom of the section containing “I Want to Learn AI ⚡” (#why-attend bottom edge / .why-highlight-banner)
+  const section1End = document.querySelector('.why-highlight-banner') || document.querySelector('#why-attend');
+
+  // 2. Bottom of the section “A Workshop Designed to Help You Learn AI the Right Way” (#credibility bottom edge / .cred-card:last-child)
+  const section2End = document.querySelector('#credibility .cred-card:last-child') || document.querySelector('#credibility');
+
+  let triggered1 = false;
+  let triggered2 = false;
+
+  // Viewport Scroll Detection (Only active below 768px)
+  const checkScrollTriggers = () => {
+    if (window.innerWidth >= 768) return;
+
+    // Trigger 1: When user reaches the bottom edge of "I Want to Learn AI ⚡" section
+    if (!triggered1 && !sessionStorage.getItem('popup_1_shown') && section1End) {
+      const rect = section1End.getBoundingClientRect();
+      if (rect.top <= window.innerHeight * 0.75) {
+        triggered1 = true;
+        sessionStorage.setItem('popup_1_shown', 'true');
+        if (popup1) popup1.classList.add('open');
+      }
+    }
+
+    // Trigger 2: When user reaches the bottom edge of "A Workshop Designed to Help You Learn AI the Right Way" section
+    if (!triggered2 && !sessionStorage.getItem('popup_2_shown') && section2End) {
+      const rect = section2End.getBoundingClientRect();
+      if (rect.top <= window.innerHeight * 0.75) {
+        triggered2 = true;
+        sessionStorage.setItem('popup_2_shown', 'true');
+        if (popup2) popup2.classList.add('open');
+      }
+    }
+  };
+
+  window.addEventListener('scroll', checkScrollTriggers, { passive: true });
+
+  // IntersectionObserver Trigger
+  if ('IntersectionObserver' in window) {
+    if (section1End) {
+      const observer1 = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !triggered1 && window.innerWidth < 768 && !sessionStorage.getItem('popup_1_shown')) {
+            triggered1 = true;
+            sessionStorage.setItem('popup_1_shown', 'true');
+            if (popup1) popup1.classList.add('open');
+          }
+        });
+      }, {
+        threshold: 0.2
+      });
+      observer1.observe(section1End);
+    }
+
+    if (section2End) {
+      const observer2 = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !triggered2 && window.innerWidth < 768 && !sessionStorage.getItem('popup_2_shown')) {
+            triggered2 = true;
+            sessionStorage.setItem('popup_2_shown', 'true');
+            if (popup2) popup2.classList.add('open');
+          }
+        });
+      }, {
+        threshold: 0.2
+      });
+      observer2.observe(section2End);
+    }
+  }
 }
 
 
