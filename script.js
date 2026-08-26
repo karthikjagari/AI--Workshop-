@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWhatsAppShare();
   initInteractiveHeroDemo();
   initHorizontalCurriculumSlider();
+  initMobileAttentionMoments();
 });
 
 // 1. Sticky Header Scroll Indicator
@@ -803,4 +804,29 @@ function initHorizontalCurriculumSlider() {
   // Initialize progress
   updateActiveState(0);
 }
+
+// Mobile-Only Attention Moments IntersectionObserver (Triggers once when 40%-60% in view)
+function initMobileAttentionMoments() {
+  const attentionMoments = document.querySelectorAll('.mobile-attention-moment');
+  if (!attentionMoments.length) return;
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.45
+    });
+
+    attentionMoments.forEach(el => observer.observe(el));
+  } else {
+    // Graceful fallback
+    attentionMoments.forEach(el => el.classList.add('in-view'));
+  }
+}
+
 

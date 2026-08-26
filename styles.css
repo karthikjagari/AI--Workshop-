@@ -3224,17 +3224,30 @@ button {
   transform: scale(1);
 }
 
-.exit-telugu-headline {
+.exit-headline {
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 3.2vw, 1.85rem);
+  font-size: clamp(1.35rem, 3.2vw, 1.8rem);
   font-weight: 900;
   line-height: 1.25;
   color: #0F172A;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.45rem;
 }
 
-.exit-telugu-headline span {
+.exit-hook-line {
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2.5vw, 1.35rem);
+  font-weight: 800;
   color: #991B1B;
+  margin-bottom: 0.35rem;
+}
+
+.exit-benefit-line {
+  font-family: var(--font-display);
+  font-size: clamp(0.92rem, 2.2vw, 1.15rem);
+  font-weight: 750;
+  color: #991B1B;
+  margin-bottom: 0.85rem;
+  line-height: 1.35;
 }
 
 .exit-popup-sub {
@@ -3356,6 +3369,164 @@ button {
   text-align: center;
   color: #64748B;
   font-size: 0.82rem;
+}
+/* ==========================================================================
+   MOBILE-ONLY ATTENTION MOMENTS (Curiosity & Conversion Blocks)
+   ========================================================================== */
+.mobile-attention-moment {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .desktop-roadmap-cta {
+    display: none !important;
+  }
+
+  .mobile-attention-moment {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #FFFDF8 0%, #FFF5F2 100%);
+    border: 1.5px solid rgba(159, 18, 57, 0.15);
+    border-radius: 18px;
+    padding: 1.25rem 1rem;
+    box-shadow: 0 10px 25px rgba(159, 18, 57, 0.05);
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+    width: 100%;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .mobile-attention-moment.in-view {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .attention-moment-1 {
+    margin: 0.85rem auto 1.35rem auto;
+  }
+
+  .attention-moment-2 {
+    margin-top: 1.5rem;
+    border-color: rgba(255, 178, 24, 0.45);
+    background: linear-gradient(135deg, #FFFDF9 0%, #FFF8EE 100%);
+    box-shadow: 0 10px 25px rgba(255, 178, 24, 0.08);
+  }
+
+  .attention-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .attention-headline {
+    font-family: var(--font-display);
+    font-size: 1.22rem;
+    font-weight: 900;
+    color: #0F172A;
+    margin: 0 0 0.35rem 0;
+    line-height: 1.25;
+  }
+
+  .attention-pill-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #991B1B;
+    background: #FFF1F2;
+    border: 1px solid #FECDD3;
+    padding: 0.15rem 0.65rem;
+    border-radius: var(--radius-full);
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.04em;
+  }
+
+  .attention-sub {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0 0 0.85rem 0;
+    line-height: 1.35;
+  }
+
+  .attention-btn {
+    width: 100%;
+    max-width: 280px;
+    font-size: 0.88rem;
+    padding: 0.65rem 1.15rem;
+    border-radius: var(--radius-full);
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(255, 178, 24, 0.35);
+  }
+
+  .attention-venue-box {
+    margin-top: 0.95rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgba(226, 232, 240, 0.9);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .attention-venue-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+  }
+
+  .attention-venue-name {
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #0F172A;
+  }
+
+  .attention-venue-loc {
+    font-size: 0.76rem;
+    color: #64748B;
+  }
+
+  .attention-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    background: #FFF8EB;
+    border: 1px solid #FFB218;
+    border-radius: var(--radius-full);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #B45309;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .attention-map-link:active {
+    background: #FFB218;
+    color: #0F172A;
+  }
+
+  .attention-arrow {
+    font-weight: 900;
+  }
 }
 
 /* ==========================================================================
