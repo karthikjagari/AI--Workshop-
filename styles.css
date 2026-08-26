@@ -2247,19 +2247,25 @@ button {
     margin-bottom: 1.5rem;
   }
   .detail-card {
-    padding: 0.75rem 0.6rem;
+    padding: 0.75rem 0.65rem;
+    min-height: 96px;
+    border-radius: var(--radius-md);
   }
   .detail-card-label {
-    font-size: 0.68rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.66rem;
+    margin-bottom: 0.2rem;
   }
   .detail-card-value {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
     line-height: 1.2;
   }
   .detail-card-sub {
-    font-size: 0.7rem;
-    line-height: 1.3;
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+  .venue-action-badge {
+    font-size: 0.65rem;
+    padding: 0.12rem 0.45rem;
   }
 }
 
@@ -2267,10 +2273,12 @@ button {
   background: #F8FAFC;
   border: 1.5px solid #E2E8F0;
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.15rem;
+  padding: 1.1rem 1.15rem;
   transition: var(--transition-fast);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
 }
 
 .detail-card:hover {
@@ -2293,29 +2301,42 @@ button {
   background: #FFFFFF;
 }
 
+.detail-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.detail-card-header-row .detail-card-label {
+  margin-bottom: 0;
+}
+
 .venue-action-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.85rem;
-  padding: 0.35rem 0.8rem;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
   background: #FFF8EB;
-  border: 1.5px solid #FFB218;
+  border: 1px solid rgba(255, 178, 24, 0.75);
   border-radius: var(--radius-full);
   font-family: var(--font-display);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #B45309;
   letter-spacing: 0.01em;
   transition: all 0.25s ease;
   width: fit-content;
+  white-space: nowrap;
 }
 
 .detail-card-clickable:hover .venue-action-badge {
   background: #FFB218;
   color: #0F172A;
   border-color: #F59E0B;
-  box-shadow: 0 4px 12px rgba(255, 178, 24, 0.35);
+  box-shadow: 0 2px 8px rgba(255, 178, 24, 0.35);
 }
 
 .venue-action-arrow {
@@ -2325,7 +2346,7 @@ button {
 }
 
 .detail-card-clickable:hover .venue-action-arrow {
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
 
 .detail-card-label {
@@ -2335,7 +2356,7 @@ button {
   color: #D97706;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -2343,16 +2364,17 @@ button {
 
 .detail-card-value {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.22rem;
   font-weight: 800;
   color: #0F172A;
   line-height: 1.25;
 }
 
 .detail-card-sub {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: #64748B;
   margin-top: 0.2rem;
+  line-height: 1.35;
 }
 
 .venue-map-link {
