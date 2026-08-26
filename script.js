@@ -114,7 +114,7 @@ function initFaqAccordion() {
 }
 
 // Official Google Form Registration URL
-const OFFICIAL_GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform';
+const OFFICIAL_GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSSeHoAGLnqiCyKDJikSelyQiEQVtUY-c4Ah4sQtiE7iSjbQ/viewform';
 
 // Global student registration state (populated strictly from verified registration response)
 const registeredStudentState = {
@@ -869,8 +869,8 @@ function initMobileScrollPopups() {
   // 1. Bottom of the section containing “I Want to Learn AI ⚡” (#why-attend bottom edge / .why-highlight-banner)
   const section1End = document.querySelector('.why-highlight-banner') || document.querySelector('#why-attend');
 
-  // 2. Bottom of the section “A Workshop Designed to Help You Learn AI the Right Way” (#credibility bottom edge / .cred-card:last-child)
-  const section2End = document.querySelector('#credibility .cred-card:last-child') || document.querySelector('#credibility');
+  // 2. Bottom of the roadmap section / Recognition & Rewards (.finish-gate / Station 08)
+  const section2End = document.querySelector('.finish-gate') || document.querySelector('.theme-8') || document.querySelector('.landscape-track-container') || document.querySelector('#takeaways');
 
   let triggered1 = false;
   let triggered2 = false;
