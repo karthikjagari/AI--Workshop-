@@ -512,7 +512,7 @@ function updatePassDisplay(name, passId) {
   });
 }
 
-// 7. Canvas High-Definition Tightly-Cropped Entry Pass PNG Exporter
+// 7. High-Definition Tightly-Cropped Entry Pass PNG Exporter (html2canvas with Canvas Fallback)
 function initPassCanvasExporter() {
   const downloadBtns = document.querySelectorAll('.btn-download-pass-png');
 
@@ -527,13 +527,76 @@ function initPassCanvasExporter() {
 }
 
 function generateAndDownloadPassPNG(name, passId) {
-  // Dimensions tightly matching the entry pass card without outer whitespace
+  const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
+  const cleanPassId = (passId || registeredStudentState.passId || 'Workshop-A7K9').trim().toUpperCase();
+  const safeFileName = cleanName.replace(/[^a-zA-Z0-9]/g, '_');
+  const sourceCard = document.getElementById('standard-entry-pass');
+
+  // Primary Method: html2canvas capturing the exact on-screen entry-pass element
+  if (typeof html2canvas === 'function' && sourceCard) {
+    // Create an isolated fixed-width clone to ensure standard proportions across all mobile screens
+    const clone = sourceCard.cloneNode(true);
+    clone.style.width = '430px';
+    clone.style.maxWidth = '430px';
+    clone.style.minWidth = '430px';
+    clone.style.margin = '0';
+    clone.style.position = 'fixed';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.zIndex = '-9999';
+    clone.style.transform = 'none';
+    clone.style.boxShadow = 'none';
+    document.body.appendChild(clone);
+
+    const logoImg = clone.querySelector('.pass-brand-logo');
+    const executeCapture = () => {
+      html2canvas(clone, {
+        scale: 3, // 3x high-definition rendering (1290px width)
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null, // Transparent outside rounded corners
+        logging: false,
+        imageTimeout: 6000
+      }).then(canvas => {
+        if (clone.parentNode) document.body.removeChild(clone);
+        const link = document.createElement('a');
+        link.download = `NIAT_AI_Bootcamp_Pass_${cleanPassId}_${safeFileName}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }).catch(err => {
+        console.warn('html2canvas capture fallback:', err);
+        if (clone.parentNode) document.body.removeChild(clone);
+        fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
+      });
+    };
+
+    if (logoImg && !logoImg.complete) {
+      logoImg.onload = executeCapture;
+      logoImg.onerror = executeCapture;
+    } else {
+      setTimeout(executeCapture, 60);
+    }
+  } else {
+    fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
+  }
+}
+
+// Fallback Canvas Exporter with NIAT Logo & Rounded Clipping
+function fallbackDirectCanvasPNG(name, passId, safeFileName) {
   const width = 860;
-  const height = 615;
+  const height = 620;
+  const radius = 24;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
+
+  // Clip canvas to rounded rectangle so corners are transparent
+  ctx.save();
+  drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, radius);
+  ctx.clip();
 
   // Background Fill
   ctx.fillStyle = '#FAF8F5';
@@ -556,27 +619,43 @@ function generateAndDownloadPassPNG(name, passId) {
     ctx.stroke();
   }
 
-  // Outer Border directly at card perimeter (tight crop)
-  ctx.strokeStyle = '#CBD5E1';
+  // Outer Border directly at card boundary
+  ctx.strokeStyle = '#E2E8F0';
   ctx.lineWidth = 3;
-  drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, 22);
+  drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, radius);
   ctx.stroke();
 
-  // Content coordinates (Padding: 32px left/right, 26px top/bottom)
   const padX = 32;
   const innerW = width - padX * 2; // 796px
-
-  // 1. Header Row
   const headerY = 52;
-  // NIAT Brand Logo / Title
-  ctx.fillStyle = '#9F1239';
-  ctx.font = '900 30px "Space Grotesk", sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('NIAT', padX + 6, headerY);
 
-  ctx.fillStyle = '#475569';
-  ctx.font = '700 17px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('NxtWave Institute of Advanced Technologies', padX + 90, headerY - 3);
+  // Load and Draw NIAT Logo Image
+  const logo = new Image();
+  logo.crossOrigin = 'anonymous';
+  logo.onload = () => {
+    drawPassCanvasElements(ctx, logo, width, height, padX, innerW, headerY, name, passId, safeFileName, canvas);
+  };
+  logo.onerror = () => {
+    drawPassCanvasElements(ctx, null, width, height, padX, innerW, headerY, name, passId, safeFileName, canvas);
+  };
+  logo.src = 'assets/niat_logo_workshop.png';
+}
+
+function drawPassCanvasElements(ctx, logoImg, width, height, padX, innerW, headerY, name, passId, safeFileName, canvas) {
+  if (logoImg) {
+    const logoAspect = logoImg.width / logoImg.height;
+    const logoH = 34;
+    const logoW = logoH * logoAspect;
+    ctx.drawImage(logoImg, padX + 6, headerY - 24, logoW, logoH);
+  } else {
+    ctx.fillStyle = '#9F1239';
+    ctx.font = '900 28px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('NIAT', padX + 6, headerY);
+    ctx.fillStyle = '#475569';
+    ctx.font = '700 16px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('NxtWave Institute of Advanced Technologies', padX + 90, headerY - 3);
+  }
 
   // VALID ENTRY PASS Pill Badge on Header Right
   const badgeW = 200;
@@ -606,7 +685,7 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.setLineDash([]); // Reset dash
 
   // 2. Event Title & Target Banner Box
-  const bannerY = headerY + 34; // 86
+  const bannerY = headerY + 34;
   const bannerH = 135;
   ctx.fillStyle = '#FFFFFF';
   drawRoundedRect(ctx, padX, bannerY, innerW, bannerH, 14);
@@ -629,7 +708,7 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.fillText('ENTRY PASS', width / 2, bannerY + 112);
 
   // 3. Dynamic Participant Box
-  const partY = bannerY + bannerH + 16; // 237
+  const partY = bannerY + bannerH + 16;
   const partH = 130;
   ctx.fillStyle = '#FFF1F2';
   drawRoundedRect(ctx, padX, partY, innerW, partH, 14);
@@ -643,24 +722,23 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.textAlign = 'center';
   ctx.fillText('PARTICIPANT', width / 2, partY + 32);
 
-  // Dynamic Student Name with Font Scaling to ensure text stays strictly INSIDE the pass
-  const cleanName = (name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
+  // Dynamic Student Name with Font Scaling
   let nameFontSize = 34;
-  if (cleanName.length > 28) {
+  if (name.length > 28) {
     nameFontSize = 22;
-  } else if (cleanName.length > 20) {
+  } else if (name.length > 20) {
     nameFontSize = 26;
-  } else if (cleanName.length > 14) {
+  } else if (name.length > 14) {
     nameFontSize = 30;
   }
   ctx.fillStyle = '#9F1239';
   ctx.font = `900 ${nameFontSize}px "Space Grotesk", sans-serif`;
-  ctx.fillText(cleanName, width / 2, partY + 86);
+  ctx.fillText(name, width / 2, partY + 86);
 
   // 4. Dynamic Pass ID & Event Details 2-Column Grid
-  const gridY = partY + partH + 16; // 383
+  const gridY = partY + partH + 16;
   const colGap = 16;
-  const colW = (innerW - colGap) / 2; // 390
+  const colW = (innerW - colGap) / 2;
   const colH = 130;
 
   // Left Box: PASS ID
@@ -676,10 +754,9 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.textAlign = 'center';
   ctx.fillText('PASS ID', padX + colW / 2, gridY + 34);
 
-  const cleanPassId = (passId || 'Workshop-A7K9').trim().toUpperCase();
   ctx.fillStyle = '#2563EB';
   ctx.font = '900 28px "JetBrains Mono", monospace';
-  ctx.fillText(cleanPassId, padX + colW / 2, gridY + 88);
+  ctx.fillText(passId, padX + colW / 2, gridY + 88);
 
   // Right Box: DATE & MODE
   const rightX = padX + colW + colGap;
@@ -700,11 +777,11 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.fillText('30 AUGUST 2026 · OFFLINE', rightX + colW / 2, gridY + 74);
 
   ctx.fillStyle = '#059669';
-  ctx.font = '750 15px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('10:00 AM – 4:00 PM', rightX + colW / 2, gridY + 102);
+  ctx.font = '750 15px "JetBrains Mono", monospace';
+  ctx.fillText('10:00 AM - 5:00 PM', rightX + colW / 2, gridY + 102);
 
   // 5. Venue & Status Strip
-  const stripY = gridY + colH + 16; // 529
+  const stripY = gridY + colH + 16;
   const stripH = 50;
   ctx.fillStyle = '#FFFFFF';
   drawRoundedRect(ctx, padX, stripY, innerW, stripH, 10);
@@ -718,10 +795,11 @@ function generateAndDownloadPassPNG(name, passId) {
   ctx.textAlign = 'center';
   ctx.fillText('🏛️ KAPIL KAVURI HUB (KKH)   •   HYDERABAD   •   VALID ENTRY PASS', width / 2, stripY + 31);
 
+  ctx.restore();
+
   // Download Trigger
-  const safeFileName = cleanName.replace(/[^a-zA-Z0-9]/g, '_');
   const link = document.createElement('a');
-  link.download = `NIAT_AI_Bootcamp_Pass_${cleanPassId}_${safeFileName}.png`;
+  link.download = `NIAT_AI_Bootcamp_Pass_${passId}_${safeFileName}.png`;
   link.href = canvas.toDataURL('image/png');
   document.body.appendChild(link);
   link.click();
@@ -750,10 +828,10 @@ function initCalendarGenerator() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const title = encodeURIComponent('NIAT Free Offline AI Workshop (Class 12)');
-      const details = encodeURIComponent('Free Offline AI Workshop for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Entry Pass ID: ' + registeredStudentState.passId);
+      const details = encodeURIComponent('Free Offline AI Workshop for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
       const location = encodeURIComponent('Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad');
       
-      const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20260830T043000Z/20260830T103000Z&details=${details}&location=${location}`;
+      const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20260830T043000Z/20260830T113000Z&details=${details}&location=${location}`;
       window.open(gCalUrl, '_blank');
     });
   });

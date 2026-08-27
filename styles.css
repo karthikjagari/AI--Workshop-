@@ -84,6 +84,9 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
@@ -92,6 +95,8 @@ body {
   background-color: var(--color-bg-light);
   line-height: 1.6;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 img, svg {
@@ -2027,6 +2032,63 @@ button {
   }
 }
 
+/* KEY TAKEAWAYS — HIGHLIGHTED OPPORTUNITY BOX */
+.takeaways-opportunity-box {
+  margin-top: 2rem;
+  padding: 1.35rem 2.25rem;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 1.5px solid #FCD34D;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 28px rgba(180, 83, 9, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  text-align: center;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.takeaways-opp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 850;
+  color: #B45309;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.takeaways-opp-text {
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 1.8vw, 1.28rem);
+  font-weight: 800;
+  color: #1E293B;
+  line-height: 1.35;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .takeaways-opportunity-box {
+    margin-top: 1.25rem;
+    padding: 1rem 1.15rem;
+    border-radius: var(--radius-md);
+    gap: 0.35rem;
+  }
+  .takeaways-opp-badge {
+    font-size: 0.64rem;
+  }
+  .takeaways-opp-text {
+    font-size: 0.92rem;
+    line-height: 1.38;
+  }
+}
+
 /* ==========================================================================
    SECTION 6 — PHYSICAL CERTIFICATE SHOWCASE (WARM BUTTER & GOLD AMBIENT)
    ========================================================================== */
@@ -2466,6 +2528,183 @@ button {
   font-size: 0.88rem;
   color: #991B1B;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   STUDENT TESTIMONIALS — CONTINUOUS HORIZONTAL MARQUEE CAROUSEL
+   ========================================================================== */
+.testimonials-section {
+  background-color: var(--color-bg-light);
+  border-bottom: 1px solid var(--color-border-subtle);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.testimonials-marquee-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  padding: 1.25rem 0;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+.testimonials-track {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  animation: marqueeScroll 42s linear infinite;
+  will-change: transform;
+}
+
+.testimonials-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 0.625rem));
+  }
+}
+
+.testimonial-card {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  padding: 1.35rem 1.25rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.95rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-4px);
+  border-color: #FCD34D;
+  box-shadow: 0 14px 32px rgba(180, 83, 9, 0.1);
+}
+
+.testimonial-rating {
+  color: #F59E0B;
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+}
+
+.testimonial-quote {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.45;
+  font-style: italic;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-top: 1px dashed #E2E8F0;
+  padding-top: 0.75rem;
+}
+
+.author-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.author-name {
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.author-tag {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: #64748B;
+  font-weight: 700;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 480px) {
+  .testimonials-marquee-wrapper {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+    padding: 0.65rem 0;
+  }
+  .testimonials-track {
+    gap: 0.85rem;
+    animation-duration: 34s;
+  }
+  .testimonial-card {
+    width: 270px;
+    min-width: 270px;
+    max-width: 270px;
+    padding: 1.05rem 0.95rem;
+    border-radius: 14px;
+    gap: 0.75rem;
+  }
+  .testimonial-rating {
+    font-size: 0.8rem;
+  }
+  .testimonial-quote {
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+  .author-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+  .author-name {
+    font-size: 0.8rem;
+  }
+  .author-tag {
+    font-size: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonials-marquee-wrapper {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .testimonials-track {
+    animation: none;
+  }
 }
 
 /* ==========================================================================
@@ -3168,6 +3407,15 @@ button {
   margin-top: 0.12rem;
 }
 
+.pass-time-val {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: #059669;
+  margin-top: 0.12rem;
+  letter-spacing: 0.02em;
+}
+
 .pass-specs-strip {
   display: flex;
   align-items: center;
@@ -3180,7 +3428,26 @@ button {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.modal-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.75rem;
+}
+
+.modal-sub-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-whatsapp-community {
@@ -3192,7 +3459,14 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.3);
   text-align: center;
   width: 100%;
-  padding: 1rem 1.5rem;
+  padding: 0.95rem 1.25rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  box-sizing: border-box;
+  text-decoration: none;
 }
 
 .btn-whatsapp-community:hover {
@@ -3200,57 +3474,169 @@ button {
   box-shadow: 0 10px 25px rgba(37, 211, 102, 0.6);
 }
 
+.btn-download-pass-png {
+  padding: 0.85rem 1.15rem;
+  font-weight: 800;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.btn-add-calendar {
+  padding: 0.85rem 1.15rem;
+  font-weight: 750;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  text-align: center;
+}
+
 @media (max-width: 480px) {
+  .modal-backdrop {
+    padding: 0.5rem;
+  }
+  .modal-card {
+    padding: 1.35rem 0.85rem;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
   .standard-entry-pass-card {
-    padding: 1rem 0.85rem;
-    gap: 0.75rem;
+    padding: 0.9rem 0.75rem;
+    gap: 0.65rem;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .pass-card-header {
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.45rem;
   }
   .pass-brand-logo {
-    height: 26px;
-    max-width: 130px;
+    height: 24px;
+    max-width: 120px;
   }
   .pass-type-badge {
+    font-size: 0.58rem;
+    padding: 0.15rem 0.45rem;
+  }
+  .pass-event-banner {
+    padding: 0.55rem 0.4rem;
+    gap: 0.12rem;
+  }
+  .pass-badge-gold {
     font-size: 0.62rem;
-    padding: 0.15rem 0.5rem;
+  }
+  .pass-sub-badge {
+    font-size: 0.65rem;
   }
   .pass-main-title {
-    font-size: 1.15rem;
-  }
-  .pass-student-name {
     font-size: 1.05rem;
   }
+  .pass-participant-box {
+    padding: 0.55rem 0.65rem;
+  }
+  .pass-meta-label {
+    font-size: 0.58rem;
+  }
+  .pass-student-name {
+    font-size: 0.96rem;
+  }
+  .pass-id-grid {
+    gap: 0.45rem;
+  }
+  .pass-id-item {
+    padding: 0.45rem 0.35rem;
+  }
   .pass-unique-id {
-    font-size: 0.88rem;
+    font-size: 0.78rem;
+  }
+  .pass-date-val {
+    font-size: 0.64rem;
+  }
+  .pass-time-val {
+    font-size: 0.58rem;
   }
   .pass-specs-strip {
-    font-size: 0.62rem;
-    gap: 0.35rem;
-    padding: 0.3rem;
-  }
-  .pass-qr-verification-zone {
-    padding: 0.5rem;
-    gap: 0.65rem;
-  }
-  .pass-qr-canvas-box {
-    width: 65px;
-    height: 65px;
-  }
-  #pass-qr-canvas {
-    width: 65px;
-    height: 65px;
-  }
-  .pass-scan-heading {
-    font-size: 0.76rem;
-  }
-  .pass-present-instruction {
     font-size: 0.58rem;
+    gap: 0.25rem;
+    padding: 0.35rem 0.3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    line-height: 1.3;
   }
   .btn-whatsapp-community {
     font-size: 0.88rem;
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 12px;
+  }
+  .modal-sub-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+  .btn-download-pass-png {
+    font-size: 0.88rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 12px;
+    width: 100%;
+  }
+  .btn-add-calendar {
+    font-size: 0.86rem;
+    padding: 0.75rem 0.95rem;
+    border-radius: 12px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .modal-card {
+    padding: 1.15rem 0.65rem;
+  }
+  .standard-entry-pass-card {
+    padding: 0.75rem 0.6rem;
+    gap: 0.55rem;
+  }
+  .pass-brand-logo {
+    height: 20px;
+    max-width: 95px;
+  }
+  .pass-type-badge {
+    font-size: 0.52rem;
+    padding: 0.12rem 0.35rem;
+  }
+  .pass-main-title {
+    font-size: 0.95rem;
+  }
+  .pass-student-name {
+    font-size: 0.88rem;
+  }
+  .pass-unique-id {
+    font-size: 0.72rem;
+  }
+  .pass-date-val {
+    font-size: 0.58rem;
+  }
+  .pass-time-val {
+    font-size: 0.54rem;
+  }
+  .pass-specs-strip {
+    font-size: 0.52rem;
+    gap: 0.2rem;
+    padding: 0.25rem 0.2rem;
+  }
+  .btn-whatsapp-community {
+    font-size: 0.82rem;
+    padding: 0.72rem 0.8rem;
+  }
+  .btn-download-pass-png {
+    font-size: 0.82rem;
+    padding: 0.72rem 0.8rem;
+  }
+  .btn-add-calendar {
+    font-size: 0.8rem;
+    padding: 0.68rem 0.8rem;
   }
 }
 
