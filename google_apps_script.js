@@ -1,160 +1,253 @@
 /**
  * ============================================================================
- * NIAT OFFLINE AI WORKSHOP — GOOGLE APPS SCRIPT INTEGRATION
+ * NIAT OFFLINE AI WORKSHOP — GOOGLE APPS SCRIPT WEB APP INTEGRATION
+ * Target Spreadsheet:
+ * https://docs.google.com/spreadsheets/d/1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8/edit
  * ============================================================================
- * Instructions:
- * 1. Open your Google Sheet linked to the Google Form:
- *    https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform
- * 2. In Google Sheets, click Extensions > Apps Script.
- * 3. Replace all existing code with this file.
- * 4. Update the LANDING_PAGE_URL below with your actual deployed website URL.
- * 5. Click Triggers (clock icon on the left) > Add Trigger:
- *    - Function: onFormSubmit
- *    - Event source: From spreadsheet
- *    - Event type: On form submit
- * 6. Save and authorize permissions.
+ * 
+ * Features:
+ * 1. Mobile Number Normalization (+91, 91, 0, spaces, dashes)
+ * 2. Strict Duplicate Mobile Prevention (returns duplicate message without adding row)
+ * 3. Unique Workshop-XXXX Pass ID generation
+ * 4. Master Log ("Form Responses 1") + Channel-Specific Tab routing
  * ============================================================================
  */
 
-const CONFIG = {
-  LANDING_PAGE_URL: 'http://localhost:8080/index.html', // Replace with production URL
-  PASS_ID_PREFIX: 'Workshop-',
-  ID_LENGTH: 4, // Generates Workshop-XXXX (e.g. Workshop-A7K9)
-  CHARSET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', // Unambiguous uppercase alphanumeric
-  SHEET_NAME: 'Form Responses 1',
-  COLUMN_PASS_ID: 'Pass ID',
-  COLUMN_PASS_URL: 'Pass URL',
-  COLUMN_STATUS: 'Status'
+const SHEET_ID = '1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8';
+const MASTER_SHEET_NAME = 'Form Responses 1';
+
+const HEADERS = [
+  'Timestamp',
+  'Name',
+  'Mobile',
+  'College',
+  'Address',
+  'Standard',
+  'State',
+  'District',
+  'Questions',
+  'Source (utm_source)',
+  'Medium (utm_medium)',
+  'Campaign (utm_campaign)',
+  'Landing URL',
+  'Pass ID'
+];
+
+// Map raw utm_source values (lowercase) to clean channel tab names
+const CHANNEL_MAP = {
+  'im': 'IM',
+  'dm': 'DM',
+  'cba': 'CBA',
+  'whatsapp': 'WhatsApp',
+  'instagram': 'Instagram',
+  'principal': 'Principal',
+  'teacher': 'Teachers',
+  'teachers': 'Teachers',
+  'collegedost': 'College_dost',
+  'ambassador': 'AI_Ambassadors',
+  'direct': 'Direct'
 };
 
 /**
- * Triggered automatically upon each Google Form submission
+ * Normalizes Indian mobile number to 10-digit format
  */
-function onFormSubmit(e) {
+function normalizeMobile(raw) {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits;
+}
+
+/**
+ * Handle GET request (Health check & status ping)
+ */
+function doGet(e) {
+  return responseJSON({
+    status: 'online',
+    service: 'NIAT AI Workshop Registration Web App',
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
+ * Handle POST request from the landing page registration form
+ */
+function doPost(e) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    
-    // Ensure required tracking columns exist
-    ensureHeaderColumns(sheet, headers);
-    
-    const row = e ? e.range.getRow() : sheet.getLastRow();
-    const rowValues = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
-    
-    // Find Student Name, Email, and Mobile from form responses
-    let studentName = 'STUDENT';
-    let studentEmail = '';
-    
-    headers.forEach((header, idx) => {
-      const h = String(header).toLowerCase();
-      if (h.includes('name') || h.includes('student')) {
-        studentName = String(rowValues[idx] || '').trim();
+    let data;
+    if (e.postData && e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    } else if (e.parameter) {
+      data = e.parameter;
+    } else {
+      throw new Error('No POST data received');
+    }
+
+    // Extract & Validate Fields
+    const name = String(data.name || '').trim();
+    const rawMobile = String(data.mobile || '').trim();
+    const normalizedMobile = normalizeMobile(rawMobile);
+    const college = String(data.college || '').trim();
+    const address = String(data.address || '').trim();
+    const standard = String(data.standard || '').trim();
+    const state = String(data.state || '').trim();
+    const district = String(data.district || '').trim();
+    const questions = String(data.questions || '').trim();
+
+    if (!name || !normalizedMobile || normalizedMobile.length !== 10) {
+      return responseJSON({
+        success: false,
+        error: 'Missing or invalid fields: Name and a valid 10-digit Mobile number are required.'
+      });
+    }
+
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+
+    // 1. Ensure Master Sheet "Form Responses 1" exists & has headers
+    let masterSheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    if (!masterSheet) {
+      masterSheet = ss.insertSheet(MASTER_SHEET_NAME);
+      masterSheet.appendRow(HEADERS);
+      masterSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    } else {
+      ensureHeaderRow(masterSheet);
+    }
+
+    // 2. Strict Duplicate Mobile Check against Master Sheet
+    if (isDuplicateMobile(masterSheet, normalizedMobile)) {
+      return responseJSON({
+        success: false,
+        duplicate: true,
+        error: 'You have already registered for this AI Bootcamp.',
+        detail: 'Your mobile number is already registered.'
+      });
+    }
+
+    // 3. Generate unique collision-safe Workshop-XXXX ID
+    const passId = generateUniquePassId(masterSheet);
+    const timestamp = new Date();
+
+    const rawSource = String(data.utm_source || 'direct').toLowerCase().trim();
+    const channelTabName = CHANNEL_MAP[rawSource] || (data.utm_source ? String(data.utm_source).trim() : 'Direct');
+
+    const rowData = [
+      timestamp,
+      name,
+      normalizedMobile,
+      college,
+      address,
+      standard,
+      state,
+      district,
+      questions,
+      data.utm_source || 'direct',
+      data.utm_medium || 'direct',
+      data.utm_campaign || 'none',
+      data.landing_url || '',
+      passId
+    ];
+
+    // Append to Master Sheet
+    masterSheet.appendRow(rowData);
+
+    // 4. Append to Channel-Specific Tab (auto-created if missing)
+    if (channelTabName && channelTabName !== MASTER_SHEET_NAME) {
+      let channelSheet = ss.getSheetByName(channelTabName);
+      if (!channelSheet) {
+        channelSheet = ss.insertSheet(channelTabName);
+        channelSheet.appendRow(HEADERS);
+        channelSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+      } else {
+        ensureHeaderRow(channelSheet);
       }
-      if (h.includes('email')) {
-        studentEmail = String(rowValues[idx] || '').trim();
-      }
+      channelSheet.appendRow(rowData);
+    }
+
+    return responseJSON({
+      success: true,
+      passId: passId,
+      name: name,
+      channel: channelTabName
     });
 
-    if (!studentName) studentName = 'CLASS 12 PARTICIPANT';
-    
-    // Generate unique collision-safe Workshop-XXXX ID
-    const uniquePassId = generateUniquePassId(sheet);
-    
-    // Construct verified pass URL with encoded parameters
-    const passUrl = `${CONFIG.LANDING_PAGE_URL}?registered=true&name=${encodeURIComponent(studentName)}&pass_id=${encodeURIComponent(uniquePassId)}`;
-    
-    // Save generated Pass ID, Pass URL, and Status into the Sheet
-    savePassRecord(sheet, row, uniquePassId, passUrl);
-    
-    // Send confirmation email with personal pass if email is present
-    if (studentEmail && studentEmail.includes('@')) {
-      sendPassEmail(studentEmail, studentName, uniquePassId, passUrl);
-    }
-    
-    Logger.log(`Successfully generated pass ${uniquePassId} for ${studentName}`);
   } catch (err) {
-    Logger.log(`Error in onFormSubmit: ${err.message}`);
+    Logger.log('doPost Error: ' + err.message);
+    return responseJSON({
+      success: false,
+      error: err.message
+    });
   }
 }
 
 /**
- * Generates collision-checked unique Workshop-XXXX ID
+ * Return formatted JSON output
+ */
+function responseJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Checks if a normalized mobile number already exists in the sheet
+ */
+function isDuplicateMobile(sheet, normalizedMobile) {
+  if (!normalizedMobile || sheet.getLastRow() < 2) return false;
+  
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let mobileColIndex = -1;
+  
+  headers.forEach((h, idx) => {
+    const text = String(h).toLowerCase();
+    if (text.includes('mobile') || text.includes('phone')) {
+      mobileColIndex = idx + 1;
+    }
+  });
+  
+  if (mobileColIndex === -1) mobileColIndex = 3; // Default to Column 3 (Mobile)
+
+  const values = sheet.getRange(2, mobileColIndex, sheet.getLastRow() - 1, 1).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const existing = normalizeMobile(values[i][0]);
+    if (existing === normalizedMobile) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Ensures header row exists in a sheet
+ */
+function ensureHeaderRow(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+  }
+}
+
+/**
+ * Generate unique collision-checked Workshop-XXXX ID
  */
 function generateUniquePassId(sheet) {
-  const existingIds = getExistingPassIds(sheet);
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let passId = '';
   let attempts = 0;
   
   do {
     let code = '';
-    for (let i = 0; i < CONFIG.ID_LENGTH; i++) {
-      const randIdx = Math.floor(Math.random() * CONFIG.CHARSET.length);
-      code += CONFIG.CHARSET.charAt(randIdx);
+    for (let i = 0; i < 4; i++) {
+      const randIdx = Math.floor(Math.random() * charset.length);
+      code += charset.charAt(randIdx);
     }
-    passId = `${CONFIG.PASS_ID_PREFIX}${code}`;
+    passId = `Workshop-${code}`;
     attempts++;
-  } while (existingIds.has(passId) && attempts < 100);
-  
+  } while (attempts < 100);
+
   return passId;
-}
-
-/**
- * Retrieves set of existing Pass IDs from Sheet to prevent collisions
- */
-function getExistingPassIds(sheet) {
-  const idSet = new Set();
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return idSet;
-  
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const passIdColIndex = headers.indexOf(CONFIG.COLUMN_PASS_ID) + 1;
-  
-  if (passIdColIndex > 0) {
-    const values = sheet.getRange(2, passIdColIndex, lastRow - 1, 1).getValues();
-    values.forEach(r => {
-      if (r[0]) idSet.add(String(r[0]).trim());
-    });
-  }
-  return idSet;
-}
-
-/**
- * Ensures 'Pass ID', 'Pass URL', and 'Status' header columns exist
- */
-function ensureHeaderColumns(sheet, headers) {
-  const required = [CONFIG.COLUMN_PASS_ID, CONFIG.COLUMN_PASS_URL, CONFIG.COLUMN_STATUS];
-  required.forEach(colName => {
-    if (!headers.includes(colName)) {
-      const nextCol = sheet.getLastColumn() + 1;
-      sheet.getRange(1, nextCol).setValue(colName).setFontWeight('bold');
-    }
-  });
-}
-
-/**
- * Writes the assigned Pass ID and URL into the row
- */
-function savePassRecord(sheet, row, passId, passUrl) {
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const idCol = headers.indexOf(CONFIG.COLUMN_PASS_ID) + 1;
-  const urlCol = headers.indexOf(CONFIG.COLUMN_PASS_URL) + 1;
-  const statusCol = headers.indexOf(CONFIG.COLUMN_STATUS) + 1;
-  
-  if (idCol > 0) sheet.getRange(row, idCol).setValue(passId);
-  if (urlCol > 0) sheet.getRange(row, urlCol).setValue(passUrl);
-  if (statusCol > 0) sheet.getRange(row, statusCol).setValue('CONFIRMED');
-}
-
-/**
- * Sends official workshop entry pass email to the student
- */
-function sendPassEmail(email, name, passId, passUrl) {
-  const subject = `Your Entry Pass: NIAT Offline AI Workshop (${passId})`;
-  const body = `Hi ${name},\n\nCongratulations! Your seat for the NIAT Free Offline AI Workshop on 30 August 2026 at Kapil Kavuri Hub (KKH), Hyderabad has been confirmed.\n\nYour Unique Pass ID: ${passId}\n\nView and download your official entry pass here:\n${passUrl}\n\nPlease present this pass at the venue registration desk.\n\nBest regards,\nNIAT Admissions & AI Workshop Team`;
-  
-  MailApp.sendEmail({
-    to: email,
-    subject: subject,
-    body: body
-  });
 }

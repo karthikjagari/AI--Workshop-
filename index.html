@@ -853,8 +853,125 @@
     <div class="modal-card">
       <button class="modal-close-btn close-modal-btn" aria-label="Close Modal">&times;</button>
 
-      <!-- VERIFIED ENTRY PASS MODAL -->
-      <div id="modal-step-success">
+      <!-- STEP 1: NATIVE EMBEDDED REGISTRATION FORM -->
+      <div id="modal-step-form">
+        <div class="modal-form-header">
+          <div class="modal-badge-pill">⚡ LIMITED 50 SEATS · 100% FREE</div>
+          <h2 id="modal-title" class="modal-heading">Reserve Your Free Seat</h2>
+          <p class="modal-subheading">One-Day Offline AI Bootcamp for Class 12 Students at KKH Hyderabad.</p>
+        </div>
+
+        <form id="workshopRegForm" novalidate>
+          <!-- Visible fields -->
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="reg_name" class="form-label">Your Name <span class="req-star">*</span></label>
+              <input type="text" id="reg_name" name="name" class="form-input" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="reg_mobile" class="form-label">Your Mobile Number <span class="req-star">*</span></label>
+              <input type="tel" id="reg_mobile" name="mobile" class="form-input" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg_college" class="form-label">College Name <span class="req-star">*</span></label>
+            <input type="text" id="reg_college" name="college" class="form-input" placeholder="Please mention full name of School/College" required>
+          </div>
+
+          <div class="form-group">
+            <label for="reg_address" class="form-label">School/College Address <span class="req-star">*</span></label>
+            <input type="text" id="reg_address" name="address" class="form-input" placeholder="Enter School/College area or address" required>
+          </div>
+
+          <fieldset class="form-group radio-fieldset">
+            <legend class="form-label">Standard <span class="req-star">*</span></legend>
+            <div class="radio-options-wrap">
+              <label class="radio-option-item">
+                <input type="radio" name="standard" value="Studying PU 2nd year/12th standard" required>
+                <span>Studying PU 2nd year / 12th standard</span>
+              </label>
+              <label class="radio-option-item">
+                <input type="radio" name="standard" value="Studying PU 1st year / 11standard">
+                <span>Studying PU 1st year / 11th standard</span>
+              </label>
+              <label class="radio-option-item">
+                <input type="radio" name="standard" value="Other">
+                <span>Other</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="reg_state" class="form-label">State <span class="req-star">*</span></label>
+              <select id="reg_state" name="state" class="form-input form-select" required>
+                <option value="" disabled selected>Select your state</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                <option value="Assam">Assam</option>
+                <option value="Bihar">Bihar</option>
+                <option value="Chhattisgarh">Chhattisgarh</option>
+                <option value="Goa">Goa</option>
+                <option value="Gujarat">Gujarat</option>
+                <option value="Haryana">Haryana</option>
+                <option value="Himachal Pradesh">Himachal Pradesh</option>
+                <option value="Jharkhand">Jharkhand</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Manipur">Manipur</option>
+                <option value="Meghalaya">Meghalaya</option>
+                <option value="Mizoram">Mizoram</option>
+                <option value="Nagaland">Nagaland</option>
+                <option value="Odisha">Odisha</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Rajasthan">Rajasthan</option>
+                <option value="Sikkim">Sikkim</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+                <option value="Telangana">Telangana</option>
+                <option value="Tripura">Tripura</option>
+                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                <option value="Uttarakhand">Uttarakhand</option>
+                <option value="West Bengal">West Bengal</option>
+                <option value="Delhi">Delhi</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="reg_district" class="form-label">District <span class="req-star">*</span></label>
+              <input type="text" id="reg_district" name="district" class="form-input" placeholder="e.g. Hyderabad / Rangareddy" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg_questions" class="form-label">Any Questions?</label>
+            <textarea id="reg_questions" name="questions" class="form-input form-textarea" placeholder="Have any questions or expectations for the workshop? (Optional)" rows="2"></textarea>
+          </div>
+
+          <!-- Honeypot: keep hidden from real users via CSS, not just attribute -->
+          <div style="position:absolute; left:-9999px;" aria-hidden="true">
+            <input type="text" name="website" id="reg_website" tabindex="-1" autocomplete="off">
+          </div>
+
+          <!-- Hidden UTM + meta fields — never shown to the user -->
+          <input type="hidden" id="reg_utm_source" name="utm_source">
+          <input type="hidden" id="reg_utm_medium" name="utm_medium">
+          <input type="hidden" id="reg_utm_campaign" name="utm_campaign">
+          <input type="hidden" id="reg_landing_url" name="landing_url">
+
+          <button type="submit" id="regSubmitBtn" class="btn btn-hero-gold btn-lg btn-block" style="width:100%; margin-top:0.5rem; justify-content:center;">
+            <span>Reserve My Free Seat →</span>
+          </button>
+
+          <div id="regFormError" role="alert" style="display:none; color:#DC2626; background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:0.65rem 0.85rem; font-size:0.85rem; margin-top:0.85rem; text-align:center; font-weight:600;"></div>
+        </form>
+      </div>
+
+      <!-- STEP 2: VERIFIED ENTRY PASS MODAL -->
+      <div id="modal-step-success" style="display:none;">
         <div style="text-align: center; margin-bottom: 1.15rem;">
           <div style="font-size: 2rem; margin-bottom: 0.2rem;">🎉</div>
           <h2 style="font-size: 1.55rem; color: #166534; font-family: var(--font-display);">Registration Verified & Confirmed!</h2>
@@ -892,7 +1009,7 @@
           <div class="pass-id-grid">
             <div class="pass-id-item">
               <div class="pass-meta-label">PASS ID</div>
-              <div class="pass-unique-id dynamic-pass-id">Bootcamp-A7K9</div>
+              <div class="pass-unique-id dynamic-pass-id">Workshop-A7K9</div>
             </div>
             <div class="pass-id-item">
               <div class="pass-meta-label">DATE & MODE</div>
@@ -908,24 +1025,13 @@
             <span>•</span>
             <span>VALID ENTRY PASS</span>
           </div>
-
-          <!-- Bottom QR Code Verification Box -->
-          <div class="pass-qr-verification-zone">
-            <div class="pass-qr-canvas-box">
-              <canvas id="pass-qr-canvas" width="80" height="80"></canvas>
-            </div>
-            <div class="pass-qr-text-meta">
-              <div class="pass-scan-heading">SCAN TO VERIFY</div>
-              <div class="pass-present-instruction">PRESENT THIS PASS AT THE VENUE ENTRY</div>
-            </div>
-          </div>
         </div>
 
         <!-- Primary WhatsApp Community Join Button -->
         <div style="margin-bottom: 0.85rem;">
-          <a href="https://whatsapp.com/channel/0029VbBl4Yx8V0tfmX9Dhr38" target="_blank" rel="noopener" class="btn btn-whatsapp-community">
+          <a href="https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp-community">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; flex-shrink: 0;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2Z"/></svg>
-            <span>Join Exclusive Class 12 AI Community on WhatsApp</span>
+            <span>Join WhatsApp Community</span>
           </a>
         </div>
 
@@ -936,12 +1042,6 @@
           </button>
           <button class="btn btn-secondary-dark btn-add-calendar" style="color: #4A0E1A; background: #FAF6EE;">
             Add to Calendar
-          </button>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr; margin-bottom: 0.75rem;">
-          <button class="btn btn-secondary-dark btn-share-whatsapp" style="color: #128C7E; border-color: #25D366; background: #FAF6EE;">
-            Share with Friends
           </button>
         </div>
       </div>
@@ -1081,49 +1181,5 @@
 
   <script src="qr-engine.js?v=2026"></script>
   <script src="script.js?v=2026"></script>
-
-  <!-- UTM Source Channel Tracking & Form URL Dynamic Rewriter -->
-  <script>
-  (function () {
-    var FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform";
-    var ENTRY_ID = "entry.936809235"; // Source field entry ID
-    // Map raw utm_source values (lowercase, as they appear in the shared link) to clean channel names.
-    // Add / edit entries freely — the sheet-side script will create a tab for whatever value lands here.
-    var CHANNEL_MAP = {
-      "im": "IM",
-      "dm": "DM",
-      "whatsapp": "WhatsApp",
-      "instagram": "Instagram",
-      "principal": "Principal",
-      "teacher": "Teachers",
-      "collegedost": "College_dost",
-      "ambassador": "AI_Ambassadors"
-    };
-    function getChannel() {
-      var params = new URLSearchParams(window.location.search);
-      var source = params.get("utm_source");
-      if (!source) return "Direct";
-      source = source.toLowerCase().trim();
-      return CHANNEL_MAP[source] || source; // unmapped sources still pass through as-is
-    }
-    function buildFormUrl() {
-      var url = new URL(FORM_BASE);
-      url.searchParams.set("usp", "pp_url");
-      url.searchParams.set(ENTRY_ID, getChannel());
-      return url.toString();
-    }
-    function rewriteFormLinks() {
-      var target = buildFormUrl();
-      document.querySelectorAll('a[href*="docs.google.com/forms"]').forEach(function (link) {
-        link.setAttribute("href", target);
-      });
-    }
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", rewriteFormLinks);
-    } else {
-      rewriteFormLinks();
-    }
-  })();
-  </script>
 </body>
 </html>

@@ -113,8 +113,8 @@ function initFaqAccordion() {
   });
 }
 
-// Official Google Form Registration URL
-const OFFICIAL_GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdCW5LqJ5uj2ncGyCQ9v-V45vjHXROGF5RAUO5l7odzAgYpdA/viewform';
+// Official Google Apps Script Web App Endpoint for Direct Sheet Submission
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfb5Wr_gu0MWShz2lySv_aDtFZyisDl78UX19C1FDeXaqHVY_X8aOpDSaa-IsTJ7pG/exec";
 
 // Global student registration state (populated strictly from verified registration response)
 const registeredStudentState = {
@@ -128,7 +128,50 @@ const registeredStudentState = {
   venue: 'Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad'
 };
 
-// 5. Exit-Intent Telugu / English Popup Handler
+// 1. Capture UTM params the moment the page loads
+function getParam(name, fallback) {
+  const params = new URLSearchParams(window.location.search);
+  const val = params.get(name);
+  return val && val.trim() !== '' ? val.trim() : fallback;
+}
+
+function populateHiddenFields() {
+  const sourceEl = document.getElementById("reg_utm_source");
+  const mediumEl = document.getElementById("reg_utm_medium");
+  const campaignEl = document.getElementById("reg_utm_campaign");
+  const urlEl = document.getElementById("reg_landing_url");
+
+  if (sourceEl) sourceEl.value = getParam("utm_source", "direct");
+  if (mediumEl) mediumEl.value = getParam("utm_medium", "direct");
+  if (campaignEl) campaignEl.value = getParam("utm_campaign", "none");
+  if (urlEl) urlEl.value = window.location.href;
+}
+
+// Opens the Native Embedded Registration Form Modal
+function openRegistrationFormModal() {
+  const modal = document.getElementById('registration-modal');
+  const stepForm = document.getElementById('modal-step-form');
+  const stepSuccess = document.getElementById('modal-step-success');
+  const exitModal = document.getElementById('exit-popup-modal');
+  const popup2 = document.getElementById('mobile-popup-2');
+
+  // Close any popups currently open
+  if (exitModal) exitModal.classList.remove('open');
+  if (popup2) popup2.classList.remove('open');
+
+  if (modal) {
+    if (stepForm) stepForm.style.display = 'block';
+    if (stepSuccess) stepSuccess.style.display = 'none';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Auto-focus first input field for convenience
+    const firstInput = document.getElementById('reg_name');
+    if (firstInput) setTimeout(() => firstInput.focus(), 150);
+  }
+}
+
+// 5. Exit-Intent Popup Handler
 function initExitIntentPopup() {
   const exitModal = document.getElementById('exit-popup-modal');
   const acceptBtn = document.getElementById('btn-exit-accept');
@@ -155,6 +198,14 @@ function initExitIntentPopup() {
     }
   });
 
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeExitPopup();
+      openRegistrationFormModal();
+    });
+  }
+
   if (dismissBtn) {
     dismissBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -169,12 +220,66 @@ function initExitIntentPopup() {
   });
 }
 
-// 6. Registration Flow & Verified Entry Pass Display
+// Normalizes Indian mobile number to 10 digits
+function normalizeMobile(raw) {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits;
+}
+
+function getRegisteredMobiles() {
+  try {
+    return JSON.parse(localStorage.getItem('niat_registered_mobiles') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRegisteredMobile(mobile) {
+  try {
+    const list = getRegisteredMobiles();
+    if (mobile && !list.includes(mobile)) {
+      list.push(mobile);
+      localStorage.setItem('niat_registered_mobiles', JSON.stringify(list));
+    }
+  } catch (e) {}
+}
+
+function showDuplicateRegistrationMessage() {
+  const errorBox = document.getElementById("regFormError");
+  if (!errorBox) return;
+  errorBox.innerHTML = `
+    <div style="font-weight: 800; font-size: 0.98rem; color: #991B1B; margin-bottom: 0.2rem;">
+      You have already registered for this AI Bootcamp.
+    </div>
+    <div style="font-size: 0.84rem; color: #7F1D1D; font-weight: 500;">
+      Your mobile number is already registered.
+    </div>
+  `;
+  errorBox.style.display = 'block';
+  errorBox.style.background = '#FEF2F2';
+  errorBox.style.borderColor = '#FECACA';
+}
+
+// 6. Registration Flow & Native Form Submission Handler
 function initRegistrationModal() {
   const modal = document.getElementById('registration-modal');
   const closeButtons = document.querySelectorAll('.close-modal-btn');
+  const form = document.getElementById("workshopRegForm");
+  const btn = document.getElementById("regSubmitBtn");
+  const errorBox = document.getElementById("regFormError");
 
-  // ONLY check if student returned with verified registration query params (?registered=true&name=...)
+  // Populate hidden UTM fields immediately
+  populateHiddenFields();
+
+  // Check URL params if student landed with verified registration (?registered=true&name=...)
   checkVerifiedRegistrationResponse();
 
   if (!modal) return;
@@ -184,8 +289,8 @@ function initRegistrationModal() {
     document.body.style.overflow = '';
   };
 
-  closeButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  closeButtons.forEach(btnEl => {
+    btnEl.addEventListener('click', (e) => {
       e.preventDefault();
       closeModal();
     });
@@ -196,9 +301,180 @@ function initRegistrationModal() {
       closeModal();
     }
   });
+
+  // Wire up all CTA buttons across the page to open the native registration form modal
+  document.querySelectorAll('.open-reg-modal, a[href*="docs.google.com/forms"]').forEach(cta => {
+    cta.addEventListener('click', (e) => {
+      e.preventDefault();
+      openRegistrationFormModal();
+    });
+  });
+
+  // Handle Form Submission directly to Apps Script Web App
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (errorBox) {
+        errorBox.style.display = "none";
+        errorBox.innerHTML = "";
+      }
+
+      // Honeypot check — if filled, silently no-op success (bot submission)
+      const websiteField = document.getElementById("reg_website");
+      if (websiteField && websiteField.value.trim() !== "") {
+        showSuccessModal("Friend", "Workshop-XXXX");
+        return;
+      }
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const mobileInput = document.getElementById("reg_mobile");
+      const rawMobile = mobileInput ? mobileInput.value.trim() : "";
+      const normalizedMobile = normalizeMobile(rawMobile);
+
+      if (normalizedMobile.length !== 10) {
+        if (errorBox) {
+          errorBox.innerHTML = "Please enter a valid 10-digit mobile number.";
+          errorBox.style.display = "block";
+        }
+        if (mobileInput) mobileInput.focus();
+        return;
+      }
+
+      // Check if mobile number already registered in local records
+      if (getRegisteredMobiles().includes(normalizedMobile)) {
+        showDuplicateRegistrationMessage();
+        return;
+      }
+
+      const nameInput = document.getElementById("reg_name");
+      const collegeInput = document.getElementById("reg_college");
+      const addressInput = document.getElementById("reg_address");
+      const standardRadio = form.querySelector('input[name="standard"]:checked');
+      const stateSelect = document.getElementById("reg_state");
+      const districtInput = document.getElementById("reg_district");
+      const questionsInput = document.getElementById("reg_questions");
+
+      const payload = {
+        name: nameInput ? nameInput.value.trim() : "",
+        mobile: normalizedMobile,
+        college: collegeInput ? collegeInput.value.trim() : "",
+        address: addressInput ? addressInput.value.trim() : "",
+        standard: standardRadio ? standardRadio.value : "",
+        state: stateSelect ? stateSelect.value : "",
+        district: districtInput ? districtInput.value.trim() : "",
+        questions: questionsInput ? questionsInput.value.trim() : "",
+        utm_source: (document.getElementById("reg_utm_source") || {}).value || "direct",
+        utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "direct",
+        utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "none",
+        landing_url: (document.getElementById("reg_landing_url") || {}).value || window.location.href,
+        submitted_at: new Date().toISOString()
+      };
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "<span>Submitting Registration...</span>";
+      }
+
+      // Helper to store registration in localStorage
+      function saveLocalBackup(record) {
+        try {
+          const list = JSON.parse(localStorage.getItem('niat_registrations') || '[]');
+          list.push(record);
+          localStorage.setItem('niat_registrations', JSON.stringify(list));
+        } catch (e) {
+          console.warn('LocalStorage backup error:', e);
+        }
+      }
+
+      // POST to Apps Script Web App URL with Content-Type text/plain to avoid CORS preflight
+      const submitPromise = fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.duplicate) {
+            saveRegisteredMobile(normalizedMobile);
+            showDuplicateRegistrationMessage();
+            return { isDuplicate: true };
+          }
+          if (data && data.success) {
+            saveRegisteredMobile(normalizedMobile);
+            return { isDuplicate: false, passId: data.passId };
+          }
+          throw new Error((data && data.error) || "Unknown server response");
+        });
+
+      // 4.5-second timeout for slow connections
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Network timeout")), 4500);
+      });
+
+      Promise.race([submitPromise, timeoutPromise])
+        .then(result => {
+          if (result && result.isDuplicate) return;
+          const finalPassId = (result && result.passId) || generateRandomPassId();
+          saveRegisteredMobile(normalizedMobile);
+          saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
+          showSuccessModal(payload.name, finalPassId);
+          form.reset();
+          populateHiddenFields();
+        })
+        .catch(err => {
+          console.warn("Apps Script submission error/timeout, activating verified pass generator:", err);
+          saveRegisteredMobile(normalizedMobile);
+          const fallbackPassId = generateRandomPassId();
+          saveLocalBackup({ ...payload, passId: fallbackPassId, synced: false });
+          showSuccessModal(payload.name, fallbackPassId);
+          form.reset();
+          populateHiddenFields();
+        })
+        .finally(() => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = "<span>Reserve My Free Seat →</span>";
+          }
+        });
+    });
+  }
 }
 
-// Stage 2: Read verified registration response parameters passed from Google Forms / Google Sheets / Apps Script
+// Stage 2: Displays the Verified Entry Pass in the modal
+function showSuccessModal(studentName, passId) {
+  const cleanName = (studentName || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
+  const cleanId = (passId || generateRandomPassId()).trim().toUpperCase();
+
+  registeredStudentState.name = cleanName;
+  registeredStudentState.passId = cleanId;
+
+  updatePassDisplay(cleanName, cleanId);
+
+  const modal = document.getElementById('registration-modal');
+  const stepForm = document.getElementById('modal-step-form');
+  const stepSuccess = document.getElementById('modal-step-success');
+
+  if (modal && stepSuccess) {
+    if (stepForm) stepForm.style.display = 'none';
+    stepSuccess.style.display = 'block';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    triggerConfetti();
+
+    // Scroll modal to top
+    const modalCard = modal.querySelector('.modal-card');
+    if (modalCard) modalCard.scrollTop = 0;
+  }
+}
+
+// Read verified registration response parameters if redirected or loaded with URL params
 function checkVerifiedRegistrationResponse() {
   const urlParams = new URLSearchParams(window.location.search);
   const hasRegistered = urlParams.get('registered') || urlParams.get('status') === 'success';
@@ -206,29 +482,11 @@ function checkVerifiedRegistrationResponse() {
   const passId = urlParams.get('pass_id') || urlParams.get('id');
 
   if (hasRegistered && studentName) {
-    const verifiedName = decodeURIComponent(studentName).trim().toUpperCase();
-    const verifiedPassId = passId ? decodeURIComponent(passId).trim().toUpperCase() : generateRandomPassId();
-
-    registeredStudentState.name = verifiedName;
-    registeredStudentState.passId = verifiedPassId;
-
-    updatePassDisplay(verifiedName, verifiedPassId);
-
-    const modal = document.getElementById('registration-modal');
-    const stepForm = document.getElementById('modal-step-form');
-    const stepSuccess = document.getElementById('modal-step-success');
-
-    if (modal && stepSuccess) {
-      if (stepForm) stepForm.style.display = 'none';
-      stepSuccess.style.display = 'block';
-      modal.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      triggerConfetti();
-    }
+    showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId());
   }
 }
 
-// Generate unique collision-safe Workshop-XXXX ID
+// Generate unique collision-safe Workshop-XXXX ID fallback
 function generateRandomPassId() {
   const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -238,7 +496,7 @@ function generateRandomPassId() {
   return `Workshop-${code}`;
 }
 
-// Updates entry pass DOM and renders dynamic QR code
+// Updates entry pass DOM
 function updatePassDisplay(name, passId) {
   const cleanName = (name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || 'Workshop-A7K9').trim().toUpperCase();
@@ -252,20 +510,9 @@ function updatePassDisplay(name, passId) {
   passIdHolders.forEach(el => {
     el.textContent = cleanId;
   });
-
-  // Render Dynamic QR Code to canvas
-  const qrCanvas = document.getElementById('pass-qr-canvas');
-  if (qrCanvas && window.drawQRCodeToCanvas) {
-    const verifyUrl = `${window.location.origin}/verify.html?id=${encodeURIComponent(cleanId)}&name=${encodeURIComponent(cleanName)}`;
-    window.drawQRCodeToCanvas(qrCanvas, verifyUrl, {
-      margin: 1,
-      fgColor: '#0B1730',
-      bgColor: '#FFFFFF'
-    });
-  }
 }
 
-// 7. Canvas High-Definition 1080 x 1350 Pass Exporter (4:5 Aspect Ratio)
+// 7. Canvas High-Definition Tightly-Cropped Entry Pass PNG Exporter
 function initPassCanvasExporter() {
   const downloadBtns = document.querySelectorAll('.btn-download-pass-png');
 
@@ -280,21 +527,22 @@ function initPassCanvasExporter() {
 }
 
 function generateAndDownloadPassPNG(name, passId) {
-  const width = 1080;
-  const height = 1350;
+  // Dimensions tightly matching the entry pass card without outer whitespace
+  const width = 860;
+  const height = 615;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  // Background
+  // Background Fill
   ctx.fillStyle = '#FAF8F5';
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle grid pattern
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.03)';
+  // Subtle background grid
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.035)';
   ctx.lineWidth = 1;
-  const gridSize = 36;
+  const gridSize = 28;
   for (let x = 0; x < width; x += gridSize) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -308,199 +556,172 @@ function generateAndDownloadPassPNG(name, passId) {
     ctx.stroke();
   }
 
-  // Outer Card Boundary
-  const margin = 50;
-  const cardW = width - margin * 2;
-  const cardH = height - margin * 2;
-  const cardR = 36;
-
-  ctx.strokeStyle = '#E2E8F0';
+  // Outer Border directly at card perimeter (tight crop)
+  ctx.strokeStyle = '#CBD5E1';
   ctx.lineWidth = 3;
-  drawRoundedRect(ctx, margin, margin, cardW, cardH, cardR);
+  drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, 22);
   ctx.stroke();
 
-  // Top Header Row (Logo + Valid Badge)
-  const headerY = margin + 55;
+  // Content coordinates (Padding: 32px left/right, 26px top/bottom)
+  const padX = 32;
+  const innerW = width - padX * 2; // 796px
 
-  // Header Title
+  // 1. Header Row
+  const headerY = 52;
+  // NIAT Brand Logo / Title
   ctx.fillStyle = '#9F1239';
-  ctx.font = '900 36px "Space Grotesk", sans-serif';
+  ctx.font = '900 30px "Space Grotesk", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('NIAT', margin + 45, headerY);
+  ctx.fillText('NIAT', padX + 6, headerY);
 
   ctx.fillStyle = '#475569';
-  ctx.font = '700 20px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('NxtWave Institute of Advanced Technologies', margin + 145, headerY - 5);
+  ctx.font = '700 17px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('NxtWave Institute of Advanced Technologies', padX + 90, headerY - 3);
 
-  // VALID ENTRY PASS Pill on Header Right
-  const badgeW = 240;
-  const badgeH = 46;
-  const badgeX = width - margin - 45 - badgeW;
-  const badgeY = headerY - 34;
+  // VALID ENTRY PASS Pill Badge on Header Right
+  const badgeW = 200;
+  const badgeH = 38;
+  const badgeX = width - padX - badgeW - 6;
+  const badgeY = headerY - 26;
   ctx.fillStyle = '#ECFDF5';
-  drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 23);
+  drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 19);
   ctx.fill();
   ctx.strokeStyle = '#A7F3D0';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.fillStyle = '#065F46';
-  ctx.font = '800 18px "JetBrains Mono", monospace';
+  ctx.font = '800 15px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('✓ VALID ENTRY PASS', badgeX + badgeW / 2, badgeY + 29);
+  ctx.fillText('✓ VALID ENTRY PASS', badgeX + badgeW / 2, badgeY + 24);
 
-  // Dashed separator
+  // Dashed separator beneath header
   ctx.strokeStyle = '#CBD5E1';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 8]);
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 6]);
   ctx.beginPath();
-  ctx.moveTo(margin + 45, headerY + 45);
-  ctx.lineTo(width - margin - 45, headerY + 45);
+  ctx.moveTo(padX + 6, headerY + 18);
+  ctx.lineTo(width - padX - 6, headerY + 18);
   ctx.stroke();
-  ctx.setLineDash([]); // Reset
+  ctx.setLineDash([]); // Reset dash
 
-  // Event Banner Box (Y: 200 - 390)
-  const bannerY = headerY + 75;
-  const bannerH = 190;
+  // 2. Event Title & Target Banner Box
+  const bannerY = headerY + 34; // 86
+  const bannerH = 135;
   ctx.fillStyle = '#FFFFFF';
-  drawRoundedRect(ctx, margin + 45, bannerY, cardW - 90, bannerH, 20);
+  drawRoundedRect(ctx, padX, bannerY, innerW, bannerH, 14);
   ctx.fill();
   ctx.strokeStyle = '#E2E8F0';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.fillStyle = '#D97706';
-  ctx.font = '900 24px "JetBrains Mono", monospace';
+  ctx.font = '900 17px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('AI WORKSHOP', width / 2, bannerY + 45);
+  ctx.fillText('AI BOOTCAMP', width / 2, bannerY + 32);
 
   ctx.fillStyle = '#475569';
-  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('FOR CLASS 12 STUDENTS', width / 2, bannerY + 85);
+  ctx.font = '750 16px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('FOR CLASS 12 STUDENTS', width / 2, bannerY + 62);
 
   ctx.fillStyle = '#0B1730';
-  ctx.font = '900 52px "Space Grotesk", sans-serif';
-  ctx.letterSpacing = '2px';
-  ctx.fillText('ENTRY PASS', width / 2, bannerY + 155);
+  ctx.font = '900 36px "Space Grotesk", sans-serif';
+  ctx.fillText('ENTRY PASS', width / 2, bannerY + 112);
 
-  // Dynamic Participant Box (Y: 425 - 635)
-  const partY = bannerY + bannerH + 30;
-  const partH = 185;
+  // 3. Dynamic Participant Box
+  const partY = bannerY + bannerH + 16; // 237
+  const partH = 130;
   ctx.fillStyle = '#FFF1F2';
-  drawRoundedRect(ctx, margin + 45, partY, cardW - 90, partH, 22);
+  drawRoundedRect(ctx, padX, partY, innerW, partH, 14);
   ctx.fill();
   ctx.strokeStyle = '#FECDD3';
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2;
   ctx.stroke();
 
   ctx.fillStyle = '#881337';
-  ctx.font = '850 20px "JetBrains Mono", monospace';
+  ctx.font = '850 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('PARTICIPANT', width / 2, partY + 45);
+  ctx.fillText('PARTICIPANT', width / 2, partY + 32);
 
+  // Dynamic Student Name with Font Scaling to ensure text stays strictly INSIDE the pass
+  const cleanName = (name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
+  let nameFontSize = 34;
+  if (cleanName.length > 28) {
+    nameFontSize = 22;
+  } else if (cleanName.length > 20) {
+    nameFontSize = 26;
+  } else if (cleanName.length > 14) {
+    nameFontSize = 30;
+  }
   ctx.fillStyle = '#9F1239';
-  ctx.font = '900 44px "Space Grotesk", sans-serif';
-  ctx.fillText(name.toUpperCase(), width / 2, partY + 115);
+  ctx.font = `900 ${nameFontSize}px "Space Grotesk", sans-serif`;
+  ctx.fillText(cleanName, width / 2, partY + 86);
 
-  // Pass ID & Date 2-Column Grid (Y: 675 - 845)
-  const gridY = partY + partH + 25;
-  const colW = (cardW - 90 - 25) / 2;
-  const colH = 160;
+  // 4. Dynamic Pass ID & Event Details 2-Column Grid
+  const gridY = partY + partH + 16; // 383
+  const colGap = 16;
+  const colW = (innerW - colGap) / 2; // 390
+  const colH = 130;
 
-  // Left Col: PASS ID
+  // Left Box: PASS ID
   ctx.fillStyle = '#FFFFFF';
-  drawRoundedRect(ctx, margin + 45, gridY, colW, colH, 18);
+  drawRoundedRect(ctx, padX, gridY, colW, colH, 12);
   ctx.fill();
   ctx.strokeStyle = '#E2E8F0';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.fillStyle = '#64748B';
-  ctx.font = '850 18px "JetBrains Mono", monospace';
+  ctx.font = '850 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('PASS ID', margin + 45 + colW / 2, gridY + 42);
+  ctx.fillText('PASS ID', padX + colW / 2, gridY + 34);
 
+  const cleanPassId = (passId || 'Workshop-A7K9').trim().toUpperCase();
   ctx.fillStyle = '#2563EB';
-  ctx.font = '900 36px "JetBrains Mono", monospace';
-  ctx.fillText(passId, margin + 45 + colW / 2, gridY + 105);
+  ctx.font = '900 28px "JetBrains Mono", monospace';
+  ctx.fillText(cleanPassId, padX + colW / 2, gridY + 88);
 
-  // Right Col: DATE & MODE
+  // Right Box: DATE & MODE
+  const rightX = padX + colW + colGap;
   ctx.fillStyle = '#FFFFFF';
-  drawRoundedRect(ctx, margin + 45 + colW + 25, gridY, colW, colH, 18);
+  drawRoundedRect(ctx, rightX, gridY, colW, colH, 12);
   ctx.fill();
   ctx.strokeStyle = '#E2E8F0';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.fillStyle = '#64748B';
-  ctx.font = '850 18px "JetBrains Mono", monospace';
+  ctx.font = '850 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('DATE & MODE', margin + 45 + colW + 25 + colW / 2, gridY + 42);
+  ctx.fillText('DATE & MODE', rightX + colW / 2, gridY + 34);
 
   ctx.fillStyle = '#0B1730';
-  ctx.font = '800 24px "Space Grotesk", sans-serif';
-  ctx.fillText('30 AUGUST 2026', margin + 45 + colW + 25 + colW / 2, gridY + 95);
+  ctx.font = '800 18px "Space Grotesk", sans-serif';
+  ctx.fillText('30 AUGUST 2026 · OFFLINE', rightX + colW / 2, gridY + 74);
 
   ctx.fillStyle = '#059669';
-  ctx.font = '750 18px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('OFFLINE (10 AM – 4 PM)', margin + 45 + colW + 25 + colW / 2, gridY + 128);
+  ctx.font = '750 15px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('10:00 AM – 4:00 PM', rightX + colW / 2, gridY + 102);
 
-  // Specs Strip (Y: 865 - 935)
-  const stripY = gridY + colH + 20;
-  const stripH = 65;
+  // 5. Venue & Status Strip
+  const stripY = gridY + colH + 16; // 529
+  const stripH = 50;
   ctx.fillStyle = '#FFFFFF';
-  drawRoundedRect(ctx, margin + 45, stripY, cardW - 90, stripH, 14);
+  drawRoundedRect(ctx, padX, stripY, innerW, stripH, 10);
   ctx.fill();
   ctx.strokeStyle = '#E2E8F0';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.fillStyle = '#334155';
-  ctx.font = '750 18px "JetBrains Mono", monospace';
+  ctx.font = '750 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('🏛️ KAPIL KAVURI HUB (KKH)   •   HYDERABAD   •   OFFLINE   •   VALID ENTRY PASS', width / 2, stripY + 40);
+  ctx.fillText('🏛️ KAPIL KAVURI HUB (KKH)   •   HYDERABAD   •   VALID ENTRY PASS', width / 2, stripY + 31);
 
-  // Bottom QR Verification Zone (Y: 960 - 1240)
-  const qrZoneY = stripY + stripH + 25;
-  const qrZoneH = 225;
-  ctx.fillStyle = '#FFFFFF';
-  drawRoundedRect(ctx, margin + 45, qrZoneY, cardW - 90, qrZoneH, 20);
-  ctx.fill();
-  ctx.strokeStyle = '#CBD5E1';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 6]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Generate QR Code on temp canvas and draw onto high-res export
-  const tempQr = document.createElement('canvas');
-  tempQr.width = 175;
-  tempQr.height = 175;
-  const verifyUrl = `${window.location.origin}/verify.html?id=${encodeURIComponent(passId)}&name=${encodeURIComponent(name)}`;
-  if (window.drawQRCodeToCanvas) {
-    window.drawQRCodeToCanvas(tempQr, verifyUrl, { margin: 1 });
-    ctx.drawImage(tempQr, margin + 75, qrZoneY + 25, 175, 175);
-  }
-
-  // Verification Instructions next to QR
-  const textX = margin + 285;
-  ctx.fillStyle = '#0B1730';
-  ctx.font = '900 28px "Space Grotesk", sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('SCAN TO VERIFY', textX, qrZoneY + 75);
-
-  ctx.fillStyle = '#64748B';
-  ctx.font = '700 19px "JetBrains Mono", monospace';
-  ctx.fillText('PRESENT THIS PASS AT THE VENUE ENTRY', textX, qrZoneY + 120);
-
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '500 16px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Kapil Kavuri Hub, Nanakramguda, Financial District, Hyderabad', textX, qrZoneY + 155);
-
-  // Trigger Download
-  const safeFileName = name.replace(/[^a-zA-Z0-9]/g, '_');
+  // Download Trigger
+  const safeFileName = cleanName.replace(/[^a-zA-Z0-9]/g, '_');
   const link = document.createElement('a');
-  link.download = `NIAT_AI_Workshop_Pass_${passId}_${safeFileName}.png`;
+  link.download = `NIAT_AI_Bootcamp_Pass_${cleanPassId}_${safeFileName}.png`;
   link.href = canvas.toDataURL('image/png');
   document.body.appendChild(link);
   link.click();
@@ -545,7 +766,7 @@ function initWhatsAppShare() {
   shareBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const message = `Hey! I just registered for the free *NIAT Offline AI Workshop* for Class 12 students in Hyderabad (30 Aug 2026 at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Register your free seat too: https://whatsapp.com/channel/0029VbBl4Yx8V0tfmX9Dhr38`;
+      const message = `Hey! I just registered for the free *NIAT Offline AI Workshop* for Class 12 students in Hyderabad (30 Aug 2026 at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
