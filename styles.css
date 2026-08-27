@@ -137,8 +137,15 @@ button {
 
 @media (max-width: 768px) {
   .section-padding {
-    padding-top: 2.85rem;
-    padding-bottom: 2.85rem;
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-padding {
+    padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
   }
 }
 
@@ -467,14 +474,22 @@ button {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .mobile-nav-toggle {
+    display: none !important;
+  }
   .nav-container {
     height: 56px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   .niat-shield-logo-img,
   .niat-logo-img {
-    height: 32px;
-    max-width: 160px;
+    height: 34px;
+    max-width: 170px;
   }
   .nav-actions .open-reg-modal {
     display: none;
@@ -3305,12 +3320,24 @@ button {
   background: #ECFDF5;
   color: #065F46;
   border: 1px solid #A7F3D0;
-  padding: 0.2rem 0.6rem;
+  padding: 0.28rem 0.75rem;
   border-radius: 9999px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.pass-type-badge span {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-0.5px);
 }
 
 .pass-event-banner {
@@ -3354,8 +3381,14 @@ button {
   background: #FFF1F2;
   border: 1.5px solid #FECDD3;
   border-radius: 12px;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  gap: 0.3rem;
+  box-sizing: border-box;
 }
 
 .pass-meta-label {
@@ -3364,7 +3397,9 @@ button {
   font-weight: 850;
   color: #881337;
   letter-spacing: 0.1em;
-  margin-bottom: 0.15rem;
+  line-height: 1;
+  margin: 0;
+  text-align: center;
 }
 
 .pass-student-name {
@@ -3374,7 +3409,9 @@ button {
   color: #9F1239;
   letter-spacing: 0.02em;
   word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.15;
+  margin: 0;
+  text-align: center;
 }
 
 .pass-id-grid {
@@ -3420,17 +3457,27 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 750;
   color: #334155;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.65rem;
   box-sizing: border-box;
   width: 100%;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pass-specs-strip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
 }
 
 .modal-success-actions {
@@ -3560,12 +3607,11 @@ button {
     font-size: 0.58rem;
   }
   .pass-specs-strip {
-    font-size: 0.58rem;
-    gap: 0.25rem;
-    padding: 0.35rem 0.3rem;
-    flex-wrap: wrap;
+    font-size: 0.56rem;
+    gap: 0.35rem;
+    padding: 0.38rem 0.45rem;
+    white-space: nowrap;
     justify-content: center;
-    line-height: 1.3;
   }
   .btn-whatsapp-community {
     font-size: 0.88rem;
@@ -3604,7 +3650,7 @@ button {
   }
   .pass-type-badge {
     font-size: 0.52rem;
-    padding: 0.12rem 0.35rem;
+    padding: 0.15rem 0.45rem;
   }
   .pass-main-title {
     font-size: 0.95rem;
@@ -3622,9 +3668,11 @@ button {
     font-size: 0.54rem;
   }
   .pass-specs-strip {
-    font-size: 0.52rem;
-    gap: 0.2rem;
-    padding: 0.25rem 0.2rem;
+    font-size: 0.48rem;
+    gap: 0.25rem;
+    padding: 0.32rem 0.35rem;
+    white-space: nowrap;
+    justify-content: center;
   }
   .btn-whatsapp-community {
     font-size: 0.82rem;

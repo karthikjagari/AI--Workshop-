@@ -496,14 +496,29 @@ function generateRandomPassId() {
   return `Workshop-${code}`;
 }
 
-// Updates entry pass DOM
+// Updates entry pass DOM with 100% dynamic registration data
 function updatePassDisplay(name, passId) {
-  const cleanName = (name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
-  const cleanId = (passId || 'Workshop-A7K9').trim().toUpperCase();
+  const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
+  const cleanId = (passId || registeredStudentState.passId || 'Workshop-A7K9').trim().toUpperCase();
 
   const nameHolders = document.querySelectorAll('.dynamic-student-name');
   nameHolders.forEach(el => {
     el.textContent = cleanName;
+    
+    // Dynamic text auto-scaling so short, medium, and long names stay balanced inside the box
+    if (cleanName.length > 26) {
+      el.style.fontSize = '0.92rem';
+      el.style.lineHeight = '1.15';
+    } else if (cleanName.length > 18) {
+      el.style.fontSize = '1.05rem';
+      el.style.lineHeight = '1.15';
+    } else if (cleanName.length > 12) {
+      el.style.fontSize = '1.18rem';
+      el.style.lineHeight = '1.15';
+    } else {
+      el.style.fontSize = ''; // Default CSS font size (1.25rem)
+      el.style.lineHeight = '';
+    }
   });
 
   const passIdHolders = document.querySelectorAll('.dynamic-pass-id');
@@ -532,33 +547,28 @@ function generateAndDownloadPassPNG(name, passId) {
   const safeFileName = cleanName.replace(/[^a-zA-Z0-9]/g, '_');
   const sourceCard = document.getElementById('standard-entry-pass');
 
-  // Primary Method: html2canvas capturing the exact on-screen entry-pass element
-  if (typeof html2canvas === 'function' && sourceCard) {
-    // Create an isolated fixed-width clone to ensure standard proportions across all mobile screens
-    const clone = sourceCard.cloneNode(true);
-    clone.style.width = '430px';
-    clone.style.maxWidth = '430px';
-    clone.style.minWidth = '430px';
-    clone.style.margin = '0';
-    clone.style.position = 'fixed';
-    clone.style.left = '-9999px';
-    clone.style.top = '0';
-    clone.style.zIndex = '-9999';
-    clone.style.transform = 'none';
-    clone.style.boxShadow = 'none';
-    document.body.appendChild(clone);
+  if (!sourceCard) {
+    fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
+    return;
+  }
 
-    const logoImg = clone.querySelector('.pass-brand-logo');
-    const executeCapture = () => {
-      html2canvas(clone, {
-        scale: 3, // 3x high-definition rendering (1290px width)
+  // Ensure on-screen pass is synchronized with current participant details
+  updatePassDisplay(cleanName, cleanPassId);
+
+  const logoImg = sourceCard.querySelector('.pass-brand-logo');
+
+  const executeCapture = () => {
+    // Primary Method: html2canvas capturing the exact on-screen entry-pass element
+    if (typeof html2canvas === 'function') {
+      html2canvas(sourceCard, {
+        scale: 3, // Crisp 3x high-definition rendering
         useCORS: true,
         allowTaint: true,
         backgroundColor: null, // Transparent outside rounded corners
-        logging: false,
-        imageTimeout: 6000
+        scrollX: 0,
+        scrollY: 0,
+        logging: false
       }).then(canvas => {
-        if (clone.parentNode) document.body.removeChild(clone);
         const link = document.createElement('a');
         link.download = `NIAT_AI_Bootcamp_Pass_${cleanPassId}_${safeFileName}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -567,19 +577,27 @@ function generateAndDownloadPassPNG(name, passId) {
         document.body.removeChild(link);
       }).catch(err => {
         console.warn('html2canvas capture fallback:', err);
-        if (clone.parentNode) document.body.removeChild(clone);
         fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
       });
-    };
+    } else {
+      fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
+    }
+  };
 
+  // Ensure fonts and logo image are fully loaded before capturing
+  const prepareAndCapture = () => {
     if (logoImg && !logoImg.complete) {
-      logoImg.onload = executeCapture;
-      logoImg.onerror = executeCapture;
+      logoImg.onload = () => setTimeout(executeCapture, 60);
+      logoImg.onerror = () => setTimeout(executeCapture, 60);
     } else {
       setTimeout(executeCapture, 60);
     }
+  };
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(prepareAndCapture).catch(prepareAndCapture);
   } else {
-    fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
+    prepareAndCapture();
   }
 }
 
