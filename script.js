@@ -269,18 +269,27 @@ function saveRegisteredMobile(mobile) {
 
 function showDuplicateRegistrationMessage() {
   const errorBox = document.getElementById("regFormError");
-  if (!errorBox) return;
-  errorBox.innerHTML = `
-    <div style="font-weight: 800; font-size: 0.98rem; color: #991B1B; margin-bottom: 0.2rem;">
-      You have already registered for this AI Bootcamp.
-    </div>
-    <div style="font-size: 0.84rem; color: #7F1D1D; font-weight: 500;">
-      Your mobile number is already registered.
-    </div>
-  `;
-  errorBox.style.display = 'block';
-  errorBox.style.background = '#FEF2F2';
-  errorBox.style.borderColor = '#FECACA';
+  const mobileInput = document.getElementById("reg_mobile");
+  const btn = document.getElementById("regSubmitBtn");
+
+  if (errorBox) {
+    errorBox.innerHTML = "This mobile number is already registered.";
+    errorBox.style.display = 'block';
+    errorBox.style.background = '#FEF2F2';
+    errorBox.style.borderColor = '#FECACA';
+    errorBox.style.color = '#991B1B';
+    errorBox.style.fontWeight = '700';
+    errorBox.style.fontSize = '0.92rem';
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = "<span>Reserve My Free Seat →</span>";
+  }
+
+  if (mobileInput) {
+    mobileInput.focus();
+  }
 }
 
 // 6. Registration Flow & Native Form Submission Handler

@@ -86,8 +86,9 @@ const CHANNEL_MAP = {
  * Normalizes Indian mobile number to 10-digit format
  */
 function normalizeMobile(raw) {
-  if (!raw) return '';
-  let digits = String(raw).replace(/\D/g, '');
+  if (raw === null || raw === undefined) return '';
+  let str = typeof raw === 'number' ? Number(raw).toLocaleString('fullwide', { useGrouping: false }) : String(raw);
+  let digits = str.replace(/\D/g, '');
   if (digits.length === 11 && digits.startsWith('0')) {
     digits = digits.slice(1);
   } else if (digits.length === 12 && digits.startsWith('91')) {
@@ -168,13 +169,13 @@ function doPost(e) {
       ensureHeaderRow(subSheet, HEADERS);
     }
 
-    // 3. Strict Duplicate Mobile Check against Master Sheet
-    if (isDuplicateMobile(masterSheet, normalizedMobile)) {
+    // 3. Strict Duplicate Mobile Check against Master Sheet & Sub-Sheets
+    if (isDuplicateMobile(masterSheet, normalizedMobile) || isDuplicateMobile(subSheet, normalizedMobile)) {
       return responseJSON({
         success: false,
         duplicate: true,
-        error: 'You have already registered for this AI Bootcamp.',
-        detail: 'Your mobile number is already registered.'
+        error: 'This mobile number is already registered.',
+        message: 'This mobile number is already registered.'
       });
     }
 
@@ -266,25 +267,30 @@ function responseJSON(obj) {
  * Checks if a normalized mobile number already exists in the sheet
  */
 function isDuplicateMobile(sheet, normalizedMobile) {
-  if (!normalizedMobile || sheet.getLastRow() < 2) return false;
+  if (!sheet || !normalizedMobile || sheet.getLastRow() < 2) return false;
   
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  let mobileColIndex = -1;
+  const lastCol = sheet.getLastColumn();
+  const lastRow = sheet.getLastRow();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
   
+  // Find all possible mobile column indices (1-indexed)
+  const mobileCols = [];
   headers.forEach((h, idx) => {
     const text = String(h).toLowerCase();
-    if (text.includes('mobile') || text.includes('phone')) {
-      mobileColIndex = idx + 1;
+    if (text.includes('mobile') || text.includes('phone') || text.includes('contact')) {
+      mobileCols.push(idx + 1);
     }
   });
-  
-  if (mobileColIndex === -1) mobileColIndex = 3; // Default to Column 3 (Mobile)
+  if (mobileCols.length === 0) mobileCols.push(3); // Default Column 3 (Mobile)
 
-  const values = sheet.getRange(2, mobileColIndex, sheet.getLastRow() - 1, 1).getValues();
-  for (let i = 0; i < values.length; i++) {
-    const existing = normalizeMobile(values[i][0]);
-    if (existing === normalizedMobile) {
-      return true;
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < mobileCols.length; j++) {
+      const colIdx = mobileCols[j] - 1;
+      const existing = normalizeMobile(data[i][colIdx]);
+      if (existing && existing === normalizedMobile) {
+        return true;
+      }
     }
   }
   return false;
