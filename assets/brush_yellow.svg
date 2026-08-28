@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 56" preserveAspectRatio="none" width="100%" height="100%">
+  <path d="M5,16 C2,14 0,20 1,27 C0,33 3,39 8,43 C14,47 25,49 42,50 C70,51 120,52 170,50 C208,49 240,50 253,46 C258,44 260,39 259,33 C260,25 257,19 251,14 C244,9 215,8 175,7 C130,6 80,7 42,8 C24,9 9,11 5,16 Z" fill="#FEF000"/>
+  <!-- Rough edge bristles overlay -->
+  <path d="M3,20 L0,23 L2,26 L-1,29 L3,33 L0,36 L4,39 L1,42 L6,45 M256,12 L261,16 L258,20 L262,24 L257,28 L261,32 L256,36 L260,40 L255,44" stroke="#FEF000" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

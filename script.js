@@ -322,7 +322,7 @@ function initRegistrationModal() {
       // Honeypot check — if filled, silently no-op success (bot submission)
       const websiteField = document.getElementById("reg_website");
       if (websiteField && websiteField.value.trim() !== "") {
-        showSuccessModal("Friend", "Workshop-XXXX");
+        showSuccessModal("Friend", "BOOTCAMP-XXXX");
         return;
       }
 
@@ -487,13 +487,13 @@ function generateRandomPassId() {
   for (let i = 0; i < 4; i++) {
     code += charset.charAt(Math.floor(Math.random() * charset.length));
   }
-  return `Workshop-${code}`;
+  return `BOOTCAMP-${code}`;
 }
 
 // Updates entry pass DOM with 100% dynamic registration data
 function updatePassDisplay(name, passId) {
   const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
-  const cleanId = (passId || registeredStudentState.passId || 'Workshop-A7K9').trim().toUpperCase();
+  const cleanId = (passId || registeredStudentState.passId || 'BOOTCAMP-A7K9').trim().toUpperCase();
 
   const nameHolders = document.querySelectorAll('.dynamic-student-name');
   nameHolders.forEach(el => {
@@ -501,23 +501,28 @@ function updatePassDisplay(name, passId) {
     
     // Dynamic text auto-scaling so short, medium, and long names stay balanced inside the box
     if (cleanName.length > 26) {
-      el.style.fontSize = '0.92rem';
+      el.style.fontSize = '0.90rem';
       el.style.lineHeight = '1.15';
     } else if (cleanName.length > 18) {
       el.style.fontSize = '1.05rem';
       el.style.lineHeight = '1.15';
-    } else if (cleanName.length > 12) {
+    } else if (cleanName.length > 10) {
       el.style.fontSize = '1.18rem';
       el.style.lineHeight = '1.15';
     } else {
-      el.style.fontSize = ''; // Default CSS font size (1.25rem)
-      el.style.lineHeight = '';
+      el.style.fontSize = '1.34rem'; // Short names (e.g. JK)
+      el.style.lineHeight = '1.2';
     }
   });
 
   const passIdHolders = document.querySelectorAll('.dynamic-pass-id');
   passIdHolders.forEach(el => {
     el.textContent = cleanId;
+    if (cleanId.length > 15) {
+      el.style.fontSize = '0.85rem';
+    } else {
+      el.style.fontSize = '0.98rem';
+    }
   });
 }
 
@@ -537,7 +542,7 @@ function initPassCanvasExporter() {
 
 function generateAndDownloadPassPNG(name, passId) {
   const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
-  const cleanPassId = (passId || registeredStudentState.passId || 'Workshop-A7K9').trim().toUpperCase();
+  const cleanPassId = (passId || registeredStudentState.passId || 'BOOTCAMP-A7K9').trim().toUpperCase();
   const safeFileName = cleanName.replace(/[^a-zA-Z0-9]/g, '_');
   const sourceCard = document.getElementById('standard-entry-pass');
 
@@ -561,21 +566,28 @@ function generateAndDownloadPassPNG(name, passId) {
   if (cloneName) {
     cloneName.textContent = cleanName;
     if (cleanName.length > 26) {
-      cloneName.style.fontSize = '0.92rem';
+      cloneName.style.fontSize = '0.90rem';
       cloneName.style.lineHeight = '1.15';
     } else if (cleanName.length > 18) {
       cloneName.style.fontSize = '1.05rem';
       cloneName.style.lineHeight = '1.15';
-    } else if (cleanName.length > 12) {
+    } else if (cleanName.length > 10) {
       cloneName.style.fontSize = '1.18rem';
       cloneName.style.lineHeight = '1.15';
     } else {
-      cloneName.style.fontSize = '1.25rem';
+      cloneName.style.fontSize = '1.34rem';
       cloneName.style.lineHeight = '1.2';
     }
   }
   const cloneId = clone.querySelector('.dynamic-pass-id');
-  if (cloneId) cloneId.textContent = cleanPassId;
+  if (cloneId) {
+    cloneId.textContent = cleanPassId;
+    if (cleanPassId.length > 15) {
+      cloneId.style.fontSize = '0.85rem';
+    } else {
+      cloneId.style.fontSize = '0.98rem';
+    }
+  }
 
   stagingWrapper.appendChild(clone);
   document.body.appendChild(stagingWrapper);
@@ -644,29 +656,25 @@ function fallbackDirectCanvasPNG(name, passId, safeFileName) {
   drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, radius);
   ctx.clip();
 
-  // Background Fill
-  ctx.fillStyle = '#FAF8F5';
+  // Background Fill with Subtle Maroon Radial Gradient & Circular Ripples (Image 2 style)
+  const grad = ctx.createRadialGradient(width / 2, height * 0.15, 10, width / 2, height * 0.5, width * 0.65);
+  grad.addColorStop(0, '#FFF5F6');
+  grad.addColorStop(0.5, '#FFFBFB');
+  grad.addColorStop(1, '#FFF9F9');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle background grid
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.035)';
-  ctx.lineWidth = 1;
-  const gridSize = 28;
-  for (let x = 0; x < width; x += gridSize) {
+  // Subtle concentric circular wave ripples radiating from top center
+  ctx.strokeStyle = 'rgba(136, 19, 55, 0.035)';
+  ctx.lineWidth = 1.5;
+  for (let r = 30; r < width; r += 45) {
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.stroke();
-  }
-  for (let y = 0; y < height; y += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
+    ctx.arc(width / 2, height * 0.18, r, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  // Outer Border directly at card boundary
-  ctx.strokeStyle = '#E2E8F0';
+  // Outer Border
+  ctx.strokeStyle = '#FBCFE8';
   ctx.lineWidth = 3;
   drawRoundedRect(ctx, 1.5, 1.5, width - 3, height - 3, radius);
   ctx.stroke();
@@ -873,8 +881,8 @@ function initCalendarGenerator() {
   calBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const title = encodeURIComponent('NIAT Free Offline AI Workshop (Class 12)');
-      const details = encodeURIComponent('Free Offline AI Workshop for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
+      const title = encodeURIComponent('NIAT Free Offline AI Bootcamp (Class 12)');
+      const details = encodeURIComponent('Free Offline AI Bootcamp for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
       const location = encodeURIComponent('Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad');
       
       const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20260830T043000Z/20260830T113000Z&details=${details}&location=${location}`;
@@ -890,7 +898,7 @@ function initWhatsAppShare() {
   shareBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const message = `Hey! I just registered for the free *NIAT Offline AI Workshop* for Class 12 students in Hyderabad (30 Aug 2026 at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (30 Aug 2026 at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
@@ -1234,7 +1242,7 @@ function initMobileScrollPopups() {
       }
     }
 
-    // Trigger 2: When user reaches the bottom edge of "A Workshop Designed to Help You Learn AI the Right Way" section
+    // Trigger 2: When user reaches the bottom edge of "A Bootcamp Designed to Help You Learn AI the Right Way" section
     if (!triggered2 && !sessionStorage.getItem('popup_2_shown') && section2End) {
       const rect = section2End.getBoundingClientRect();
       if (rect.top <= window.innerHeight * 0.75) {

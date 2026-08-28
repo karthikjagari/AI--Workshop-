@@ -675,16 +675,41 @@ button {
 }
 
 /* CTA Area */
+.cta-whatsapp-supporting,
+.whatsapp-cta-supporting {
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0 auto 0.45rem auto;
+  text-align: center;
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .hero-cta-action-wrap {
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
   margin-top: 0.15rem;
+}
+
+.hero-cta-supporting {
+  text-align: left;
+  margin: 0 0 0.45rem 0;
 }
 
 @media (max-width: 768px) {
   .hero-cta-action-wrap {
+    align-items: center;
     width: 100%;
+  }
+  .hero-cta-supporting {
+    text-align: center;
+    margin: 0 auto 0.4rem auto;
   }
 }
 
@@ -3287,22 +3312,21 @@ button {
   width: 100%;
   max-width: 430px;
   margin: 0 auto 1.25rem;
-  background: #FAF8F5;
-  background-image: 
-    radial-gradient(circle at 10% 10%, rgba(159, 18, 57, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 90% 90%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
-    linear-gradient(rgba(15, 23, 42, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.02) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px;
-  border: 2px solid #E2E8F0;
+  background: 
+    radial-gradient(ellipse at 50% 12%, rgba(136, 19, 55, 0.07) 0%, rgba(80, 7, 36, 0.03) 50%, transparent 80%),
+    radial-gradient(circle at 50% 50%, rgba(159, 18, 57, 0.04) 0%, transparent 70%),
+    repeating-radial-gradient(circle at 50% 25%, transparent 0, transparent 24px, rgba(136, 19, 55, 0.025) 25px, transparent 26px),
+    #FFFDFD;
+  border: 1.5px solid #FBCFE8;
   border-radius: 20px;
   padding: 1.35rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(159, 18, 57, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 0.85rem;
   overflow: hidden;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .pass-card-header {
@@ -3311,20 +3335,32 @@ button {
   justify-content: space-between;
   border-bottom: 1px dashed #CBD5E1;
   padding-bottom: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pass-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
 }
 
 .pass-brand-logo {
   height: 32px;
   width: auto;
-  max-width: 160px;
+  max-width: 165px;
   object-fit: contain;
+  display: block;
 }
 
 .pass-type-badge {
   background: #ECFDF5;
   color: #065F46;
   border: 1px solid #A7F3D0;
-  padding: 0.28rem 0.75rem;
+  padding: 0 0.85rem;
+  height: 28px;
+  line-height: 26px;
   border-radius: 9999px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -3334,65 +3370,80 @@ button {
   align-items: center;
   justify-content: center;
   text-align: center;
-  line-height: 1;
   box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .pass-type-badge span {
   display: inline-block;
   line-height: 1;
-  transform: translateY(-0.5px);
+  text-align: center;
 }
 
 .pass-event-banner {
   text-align: center;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 0.75rem 0.65rem;
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
+  justify-content: center;
+  gap: 0.22rem;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
 }
 
 .pass-badge-gold {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 900;
   color: #D97706;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .pass-sub-badge {
   font-family: var(--font-display);
-  font-size: 0.74rem;
-  font-weight: 750;
+  font-size: 0.76rem;
+  font-weight: 800;
   color: #475569;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .pass-main-title {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.38rem;
   font-weight: 900;
   color: #0B1730;
   letter-spacing: 0.06em;
-  margin-top: 0.1rem;
+  margin: 0.12rem 0 0 0;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .pass-participant-box {
   background: #FFF1F2;
   border: 1.5px solid #FECDD3;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
+  min-height: 78px;
   box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(159, 18, 57, 0.03);
 }
 
 .pass-meta-label {
@@ -3408,7 +3459,7 @@ button {
 
 .pass-student-name {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.28rem;
   font-weight: 900;
   color: #9F1239;
   letter-spacing: 0.02em;
@@ -3416,20 +3467,30 @@ button {
   line-height: 1.15;
   margin: 0;
   text-align: center;
+  width: 100%;
 }
 
 .pass-id-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pass-id-item {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 0.55rem 0.75rem;
+  border-radius: 14px;
+  padding: 0.75rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  box-sizing: border-box;
+  min-height: 72px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
 }
 
 .pass-unique-id {
@@ -3438,6 +3499,9 @@ button {
   font-weight: 900;
   color: #2563EB;
   letter-spacing: 0.05em;
+  text-align: center;
+  margin-top: 0.35rem;
+  line-height: 1.2;
 }
 
 .pass-date-val {
@@ -3445,16 +3509,22 @@ button {
   font-size: 0.74rem;
   font-weight: 800;
   color: #0B1730;
-  margin-top: 0.12rem;
+  margin-top: 0.35rem;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .pass-time-val {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 750;
+  font-weight: 800;
   color: #059669;
-  margin-top: 0.12rem;
+  margin-top: 0.2rem;
   letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .pass-specs-strip {
@@ -3463,18 +3533,19 @@ button {
   justify-content: center;
   gap: 0.45rem;
   font-family: var(--font-mono);
-  font-size: 0.64rem;
-  font-weight: 750;
+  font-size: 0.62rem;
+  font-weight: 800;
   color: #334155;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
   box-sizing: border-box;
   width: 100%;
   text-align: center;
   line-height: 1.2;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
 }
 
 .pass-specs-strip span {
@@ -3491,6 +3562,44 @@ button {
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 0.75rem;
+}
+
+/* Clean polished single information card for WhatsApp community message */
+.pass-whatsapp-info-box {
+  background: #FFFDF8;
+  border: 1px solid #EFE4D6;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.pass-whatsapp-info-text {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E293B !important;
+  line-height: 1.4;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .pass-whatsapp-info-box {
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+  }
+  .pass-whatsapp-info-text {
+    font-size: 0.76rem;
+    line-height: 1.35;
+  }
 }
 
 .modal-sub-actions-grid {
