@@ -354,7 +354,6 @@ function initRegistrationModal() {
       const collegeInput = document.getElementById("reg_college");
       const addressInput = document.getElementById("reg_address");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
-      const stateSelect = document.getElementById("reg_state");
       const districtInput = document.getElementById("reg_district");
       const questionsInput = document.getElementById("reg_questions");
 
@@ -364,7 +363,6 @@ function initRegistrationModal() {
         college: collegeInput ? collegeInput.value.trim() : "",
         address: addressInput ? addressInput.value.trim() : "",
         standard: standardRadio ? standardRadio.value : "",
-        state: stateSelect ? stateSelect.value : "",
         district: districtInput ? districtInput.value.trim() : "",
         questions: questionsInput ? questionsInput.value.trim() : "",
         utm_source: (document.getElementById("reg_utm_source") || {}).value || "direct",
@@ -555,20 +553,52 @@ function generateAndDownloadPassPNG(name, passId) {
   // Ensure on-screen pass is synchronized with current participant details
   updatePassDisplay(cleanName, cleanPassId);
 
-  const logoImg = sourceCard.querySelector('.pass-brand-logo');
+  // Isolate element in an un-transformed 430px staging container to prevent modal transform & mobile media query distortion
+  const stagingWrapper = document.createElement('div');
+  stagingWrapper.style.cssText = 'position: fixed; left: 0; top: 0; z-index: -9999; opacity: 0; pointer-events: none; width: 430px; max-width: 430px; margin: 0; padding: 0; background: transparent; transform: none;';
+  
+  const clone = sourceCard.cloneNode(true);
+  clone.style.cssText = 'position: relative; width: 430px; max-width: 430px; min-width: 430px; margin: 0; box-shadow: none; transform: none; box-sizing: border-box;';
+  
+  // Ensure the dynamic name in the clone is updated and properly scaled
+  const cloneName = clone.querySelector('.dynamic-student-name');
+  if (cloneName) {
+    cloneName.textContent = cleanName;
+    if (cleanName.length > 26) {
+      cloneName.style.fontSize = '0.92rem';
+      cloneName.style.lineHeight = '1.15';
+    } else if (cleanName.length > 18) {
+      cloneName.style.fontSize = '1.05rem';
+      cloneName.style.lineHeight = '1.15';
+    } else if (cleanName.length > 12) {
+      cloneName.style.fontSize = '1.18rem';
+      cloneName.style.lineHeight = '1.15';
+    } else {
+      cloneName.style.fontSize = '1.25rem';
+      cloneName.style.lineHeight = '1.2';
+    }
+  }
+  const cloneId = clone.querySelector('.dynamic-pass-id');
+  if (cloneId) cloneId.textContent = cleanPassId;
+
+  stagingWrapper.appendChild(clone);
+  document.body.appendChild(stagingWrapper);
+
+  const logoImg = clone.querySelector('.pass-brand-logo');
 
   const executeCapture = () => {
-    // Primary Method: html2canvas capturing the exact on-screen entry-pass element
     if (typeof html2canvas === 'function') {
-      html2canvas(sourceCard, {
-        scale: 3, // Crisp 3x high-definition rendering
+      html2canvas(clone, {
+        scale: 3, // 3x high-definition rendering (1290px width)
         useCORS: true,
         allowTaint: true,
         backgroundColor: null, // Transparent outside rounded corners
         scrollX: 0,
         scrollY: 0,
-        logging: false
+        logging: false,
+        imageTimeout: 6000
       }).then(canvas => {
+        if (stagingWrapper.parentNode) document.body.removeChild(stagingWrapper);
         const link = document.createElement('a');
         link.download = `NIAT_AI_Bootcamp_Pass_${cleanPassId}_${safeFileName}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -576,10 +606,12 @@ function generateAndDownloadPassPNG(name, passId) {
         link.click();
         document.body.removeChild(link);
       }).catch(err => {
-        console.warn('html2canvas capture fallback:', err);
+        console.warn('html2canvas staging capture fallback:', err);
+        if (stagingWrapper.parentNode) document.body.removeChild(stagingWrapper);
         fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
       });
     } else {
+      if (stagingWrapper.parentNode) document.body.removeChild(stagingWrapper);
       fallbackDirectCanvasPNG(cleanName, cleanPassId, safeFileName);
     }
   };
