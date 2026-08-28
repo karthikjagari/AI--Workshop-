@@ -352,19 +352,15 @@ function initRegistrationModal() {
 
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
-      const addressInput = document.getElementById("reg_address");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
       const districtInput = document.getElementById("reg_district");
-      const questionsInput = document.getElementById("reg_questions");
 
       const payload = {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
         college: collegeInput ? collegeInput.value.trim() : "",
-        address: addressInput ? addressInput.value.trim() : "",
         standard: standardRadio ? standardRadio.value : "",
         district: districtInput ? districtInput.value.trim() : "",
-        questions: questionsInput ? questionsInput.value.trim() : "",
         utm_source: (document.getElementById("reg_utm_source") || {}).value || "direct",
         utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "direct",
         utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "none",
