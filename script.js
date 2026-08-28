@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initInteractiveHeroDemo();
   initHorizontalCurriculumSlider();
   initMobileScrollPopups();
+  initBackgroundSyncWorker();
 });
 
 // 1. Sticky Header Scroll Indicator
@@ -139,11 +140,15 @@ function populateHiddenFields() {
   const sourceEl = document.getElementById("reg_utm_source");
   const mediumEl = document.getElementById("reg_utm_medium");
   const campaignEl = document.getElementById("reg_utm_campaign");
+  const termEl = document.getElementById("reg_utm_term");
+  const contentEl = document.getElementById("reg_utm_content");
   const urlEl = document.getElementById("reg_landing_url");
 
-  if (sourceEl) sourceEl.value = getParam("utm_source", "direct");
-  if (mediumEl) mediumEl.value = getParam("utm_medium", "direct");
-  if (campaignEl) campaignEl.value = getParam("utm_campaign", "none");
+  if (sourceEl) sourceEl.value = getParam("utm_source", "");
+  if (mediumEl) mediumEl.value = getParam("utm_medium", "");
+  if (campaignEl) campaignEl.value = getParam("utm_campaign", "");
+  if (termEl) termEl.value = getParam("utm_term", "");
+  if (contentEl) contentEl.value = getParam("utm_content", "");
   if (urlEl) urlEl.value = window.location.href;
 }
 
@@ -354,16 +359,22 @@ function initRegistrationModal() {
       const collegeInput = document.getElementById("reg_college");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
       const districtInput = document.getElementById("reg_district");
+      const districtVal = districtInput ? districtInput.value.trim() : "Hyderabad";
 
       const payload = {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
         college: collegeInput ? collegeInput.value.trim() : "",
+        address: districtVal || "Hyderabad",
         standard: standardRadio ? standardRadio.value : "",
-        district: districtInput ? districtInput.value.trim() : "",
-        utm_source: (document.getElementById("reg_utm_source") || {}).value || "direct",
-        utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "direct",
-        utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "none",
+        state: "Telangana",
+        district: districtVal,
+        questions: "None",
+        utm_source: (document.getElementById("reg_utm_source") || {}).value || "",
+        utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "",
+        utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "",
+        utm_term: (document.getElementById("reg_utm_term") || {}).value || "",
+        utm_content: (document.getElementById("reg_utm_content") || {}).value || "",
         landing_url: (document.getElementById("reg_landing_url") || {}).value || window.location.href,
         submitted_at: new Date().toISOString()
       };
@@ -400,36 +411,39 @@ function initRegistrationModal() {
             showDuplicateRegistrationMessage();
             return { isDuplicate: true };
           }
-          if (data && data.success) {
+          if (data && data.success && data.passId) {
             saveRegisteredMobile(normalizedMobile);
             return { isDuplicate: false, passId: data.passId };
           }
-          throw new Error((data && data.error) || "Unknown server response");
+          throw new Error((data && data.error) || "Unable to confirm spreadsheet record");
         });
 
-      // 4.5-second timeout for slow connections
+      // 8.5-second timeout for Apps Script cold starts
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Network timeout")), 4500);
+        setTimeout(() => reject(new Error("Network timeout")), 8500);
       });
 
       Promise.race([submitPromise, timeoutPromise])
         .then(result => {
           if (result && result.isDuplicate) return;
-          const finalPassId = (result && result.passId) || generateRandomPassId();
-          saveRegisteredMobile(normalizedMobile);
-          saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
-          showSuccessModal(payload.name, finalPassId);
-          form.reset();
-          populateHiddenFields();
+          if (result && result.passId) {
+            const finalPassId = result.passId;
+            saveRegisteredMobile(normalizedMobile);
+            saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
+            showSuccessModal(payload.name, finalPassId);
+            form.reset();
+            populateHiddenFields();
+          } else {
+            throw new Error("Missing confirmed pass ID from registration server.");
+          }
         })
         .catch(err => {
-          console.warn("Apps Script submission error/timeout, activating verified pass generator:", err);
-          saveRegisteredMobile(normalizedMobile);
-          const fallbackPassId = generateRandomPassId();
-          saveLocalBackup({ ...payload, passId: fallbackPassId, synced: false });
-          showSuccessModal(payload.name, fallbackPassId);
-          form.reset();
-          populateHiddenFields();
+          console.error("Apps Script registration error:", err);
+          saveLocalBackup({ ...payload, passId: generateRandomPassId(), synced: false });
+          if (errorBox) {
+            errorBox.innerHTML = "Unable to complete registration with the server. Please check your internet connection and click 'Reserve My Free Seat' to retry.";
+            errorBox.style.display = "block";
+          }
         })
         .finally(() => {
           if (btn) {
@@ -1287,6 +1301,42 @@ function initMobileScrollPopups() {
       observer2.observe(section2End);
     }
   }
+}
+
+// 13. Background Auto-Sync Worker for offline/unsynced registrations
+function initBackgroundSyncWorker() {
+  function syncPending() {
+    try {
+      const records = JSON.parse(localStorage.getItem('niat_registrations') || '[]');
+      const unsynced = records.filter(r => r && r.synced === false);
+      if (unsynced.length === 0) return;
+
+      console.log(`[AutoSync] Found ${unsynced.length} unsynced registration(s). Syncing with Google Sheets...`);
+      unsynced.forEach(record => {
+        fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(record)
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && (data.success || data.duplicate)) {
+              record.synced = true;
+              if (data.passId) record.passId = data.passId;
+              localStorage.setItem('niat_registrations', JSON.stringify(records));
+              console.log(`[AutoSync] Synced registration for ${record.mobile} successfully.`);
+            }
+          })
+          .catch(e => console.warn(`[AutoSync] Retry failed for ${record.mobile}:`, e));
+      });
+    } catch (err) {
+      console.warn('[AutoSync] Error reading local backup:', err);
+    }
+  }
+
+  // Trigger on page load and when internet connection returns
+  syncPending();
+  window.addEventListener('online', syncPending);
 }
 
 

@@ -232,7 +232,7 @@ function ensureHeaderRow(sheet) {
 }
 
 /**
- * Generate unique collision-checked Workshop-XXXX ID
+ * Generate unique collision-checked BOOTCAMP-XXXX ID
  */
 function generateUniquePassId(sheet) {
   const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -245,7 +245,7 @@ function generateUniquePassId(sheet) {
       const randIdx = Math.floor(Math.random() * charset.length);
       code += charset.charAt(randIdx);
     }
-    passId = `Workshop-${code}`;
+    passId = `BOOTCAMP-${code}`;
     attempts++;
   } while (attempts < 100);
 
