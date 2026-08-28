@@ -115,7 +115,7 @@ function initFaqAccordion() {
 }
 
 // Official Google Apps Script Web App Endpoint for Direct Sheet Submission
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfb5Wr_gu0MWShz2lySv_aDtFZyisDl78UX19C1FDeXaqHVY_X8aOpDSaa-IsTJ7pG/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKHAeLNMhv94M2N6mizLX24TZBkqSKc83qEHND8BJJUxeER2QY7RX5pp0Frlwq-tnU/exec";
 
 // Global student registration state (populated strictly from verified registration response)
 const registeredStudentState = {

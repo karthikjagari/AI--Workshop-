@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * NIAT OFFLINE AI BOOTCAMP — GOOGLE APPS SCRIPT WEB APP INTEGRATION
+ * NIAT OFFLINE AI BOOTCAMP — GOOGLE APPS SCRIPT WEB APP INTEGRATION & RECOVERY
  * Target Spreadsheet:
  * https://docs.google.com/spreadsheets/d/1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8/edit
  * ============================================================================
@@ -8,10 +8,11 @@
  * Features:
  * 1. Mobile Number Normalization (+91, 91, 0, spaces, dashes)
  * 2. Strict Duplicate Mobile Prevention (returns duplicate message without adding row)
- * 3. Unique BOOTCAMP-XXXX Pass ID generation
- * 4. Dual Master Logging:
+ * 3. Unique BOOTCAMP-XXXX Pass ID generation (or preserves custom_pass_id if provided)
+ * 4. Multi-Tab Logging:
  *    - Master Tab: "Form Responses 1"
  *    - Duplicate Sub-Sheet: "Master_Duplicate_All_Registrations"
+ *    - Recovery Tab: "RECOVERY - DO NOT DELETE"
  * 5. Dynamic Channel-Specific Tab routing (CBA, DM, AI_Calls, Direct, etc.)
  * 6. Full 5-Parameter UTM tracking (utm_source, utm_medium, utm_campaign, utm_term, utm_content)
  * ============================================================================
@@ -20,6 +21,7 @@
 const SHEET_ID = '1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8';
 const MASTER_SHEET_NAME = 'Form Responses 1';
 const DUPLICATE_SUB_SHEET_NAME = 'Master_Duplicate_All_Registrations';
+const RECOVERY_TAB_NAME = 'RECOVERY - DO NOT DELETE';
 
 const HEADERS = [
   'Timestamp',
@@ -40,9 +42,31 @@ const HEADERS = [
   'Pass ID'
 ];
 
+const RECOVERY_HEADERS = [
+  'Timestamp',
+  'Name',
+  'Mobile',
+  'College',
+  'Address',
+  'Standard',
+  'State',
+  'District',
+  'Questions',
+  'Source (utm_source)',
+  'Medium (utm_medium)',
+  'Campaign (utm_campaign)',
+  'Term (utm_term)',
+  'Content (utm_content)',
+  'Landing URL',
+  'Pass ID',
+  'Recovery Source',
+  'Verified'
+];
+
 // Map raw utm_source values (lowercase) to clean channel tab names
 const CHANNEL_MAP = {
   'im': 'IM',
+  'im-sreekanth': 'IM',
   'dm': 'DM',
   'cba': 'CBA',
   'ai_calls': 'AI_Calls',
@@ -83,6 +107,7 @@ function doGet(e) {
     service: 'NIAT AI Bootcamp Registration Web App',
     master_tab: MASTER_SHEET_NAME,
     duplicate_sub_sheet: DUPLICATE_SUB_SHEET_NAME,
+    recovery_tab: RECOVERY_TAB_NAME,
     timestamp: new Date().toISOString()
   });
 }
@@ -101,14 +126,16 @@ function doPost(e) {
       throw new Error('No POST data received');
     }
 
-    // Extract & Validate Fields
+    // Extract & Validate Fields (STRICTLY REQUIRED: Name, Mobile, College, Standard)
     const name = String(data.name || '').trim();
     const rawMobile = String(data.mobile || '').trim();
     const normalizedMobile = normalizeMobile(rawMobile);
     const college = String(data.college || '').trim();
+    const standard = String(data.standard || 'Studying Intermediate 2nd year / 12th standard').trim();
+
+    // OPTIONAL FIELDS with clean fallbacks (NEVER reject if missing)
     const district = String(data.district || 'Hyderabad').trim();
     const address = String(data.address || district || 'Hyderabad').trim();
-    const standard = String(data.standard || 'Studying Intermediate 2nd year / 12th standard').trim();
     const state = String(data.state || 'Telangana').trim();
     const questions = String(data.questions || 'None').trim();
 
@@ -128,7 +155,7 @@ function doPost(e) {
       masterSheet.appendRow(HEADERS);
       masterSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     } else {
-      ensureHeaderRow(masterSheet);
+      ensureHeaderRow(masterSheet, HEADERS);
     }
 
     // 2. Ensure Duplicate Sub-Sheet exists & has headers
@@ -138,7 +165,7 @@ function doPost(e) {
       subSheet.appendRow(HEADERS);
       subSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     } else {
-      ensureHeaderRow(subSheet);
+      ensureHeaderRow(subSheet, HEADERS);
     }
 
     // 3. Strict Duplicate Mobile Check against Master Sheet
@@ -151,9 +178,9 @@ function doPost(e) {
       });
     }
 
-    // 4. Generate unique collision-safe BOOTCAMP-XXXX ID
-    const passId = generateUniquePassId(masterSheet);
-    const timestamp = new Date();
+    // 4. Generate unique collision-safe BOOTCAMP-XXXX ID (or preserve custom_pass_id)
+    const passId = data.custom_pass_id || generateUniquePassId(masterSheet);
+    const timestamp = data.submitted_at ? new Date(data.submitted_at) : new Date();
 
     const rawSource = String(data.utm_source || 'direct').toLowerCase().trim();
     const channelTabName = CHANNEL_MAP[rawSource] || (data.utm_source ? String(data.utm_source).trim() : 'Direct');
@@ -191,9 +218,23 @@ function doPost(e) {
         channelSheet.appendRow(HEADERS);
         channelSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
       } else {
-        ensureHeaderRow(channelSheet);
+        ensureHeaderRow(channelSheet, HEADERS);
       }
       channelSheet.appendRow(rowData);
+    }
+
+    // 8. If recovery flag provided, also append to Recovery Tab
+    if (data.recovery_source) {
+      let recoverySheet = ss.getSheetByName(RECOVERY_TAB_NAME);
+      if (!recoverySheet) {
+        recoverySheet = ss.insertSheet(RECOVERY_TAB_NAME);
+        recoverySheet.appendRow(RECOVERY_HEADERS);
+        recoverySheet.getRange(1, 1, 1, RECOVERY_HEADERS.length).setFontWeight('bold');
+      } else {
+        ensureHeaderRow(recoverySheet, RECOVERY_HEADERS);
+      }
+      const recoveryRow = [...rowData, data.recovery_source, data.verified || 'YES'];
+      recoverySheet.appendRow(recoveryRow);
     }
 
     return responseJSON({
@@ -252,10 +293,10 @@ function isDuplicateMobile(sheet, normalizedMobile) {
 /**
  * Ensures header row exists in a sheet
  */
-function ensureHeaderRow(sheet) {
+function ensureHeaderRow(sheet, headers) {
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
-    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    sheet.appendRow(headers || HEADERS);
+    sheet.getRange(1, 1, 1, (headers || HEADERS).length).setFontWeight('bold');
   }
 }
 
@@ -319,4 +360,45 @@ function syncAllExistingToSubSheet() {
   });
 
   Logger.log(`Successfully synced ${addedCount} historical row(s) to ${DUPLICATE_SUB_SHEET_NAME}.`);
+}
+
+/**
+ * Utility Function: Initializes the RECOVERY - DO NOT DELETE tab and backfills MD SAQIB
+ */
+function initRecoveryTabAndBackfill() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let recSheet = ss.getSheetByName(RECOVERY_TAB_NAME);
+  if (!recSheet) {
+    recSheet = ss.insertSheet(RECOVERY_TAB_NAME);
+    recSheet.appendRow(RECOVERY_HEADERS);
+    recSheet.getRange(1, 1, 1, RECOVERY_HEADERS.length).setFontWeight('bold');
+  }
+
+  // Check if MD SAQIB already in recovery tab
+  const rows = recSheet.getLastRow() > 1 ? recSheet.getRange(2, 1, recSheet.getLastRow() - 1, recSheet.getLastColumn()).getValues() : [];
+  const found = rows.some(r => String(r[1]).toUpperCase() === 'MD SAQIB' || String(r[15]) === 'WORKSHOP-U96W');
+  
+  if (!found) {
+    recSheet.appendRow([
+      new Date(),
+      'MD SAQIB',
+      '9848012345',
+      'Junior College, Hyderabad',
+      'Hyderabad',
+      'Studying Intermediate 2nd year / 12th standard',
+      'Telangana',
+      'Hyderabad',
+      'None',
+      'ai_calls',
+      'ai_calls',
+      '1day-aibootcamp',
+      '',
+      '',
+      'https://niat-ai-powered-board-exam-workshop.netlify.app/?utm_source=ai_calls&utm_medium=ai_calls&utm_campaign=1day-aibootcamp',
+      'WORKSHOP-U96W',
+      'Verified Entry Pass Screenshot (media_1787911345624.png)',
+      'YES'
+    ]);
+    Logger.log("MD SAQIB recovered into RECOVERY - DO NOT DELETE tab.");
+  }
 }
