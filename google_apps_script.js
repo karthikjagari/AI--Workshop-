@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * NIAT OFFLINE AI WORKSHOP — GOOGLE APPS SCRIPT WEB APP INTEGRATION
+ * NIAT OFFLINE AI BOOTCAMP — GOOGLE APPS SCRIPT WEB APP INTEGRATION
  * Target Spreadsheet:
  * https://docs.google.com/spreadsheets/d/1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8/edit
  * ============================================================================
@@ -8,13 +8,18 @@
  * Features:
  * 1. Mobile Number Normalization (+91, 91, 0, spaces, dashes)
  * 2. Strict Duplicate Mobile Prevention (returns duplicate message without adding row)
- * 3. Unique Workshop-XXXX Pass ID generation
- * 4. Master Log ("Form Responses 1") + Channel-Specific Tab routing
+ * 3. Unique BOOTCAMP-XXXX Pass ID generation
+ * 4. Dual Master Logging:
+ *    - Master Tab: "Form Responses 1"
+ *    - Duplicate Sub-Sheet: "Master_Duplicate_All_Registrations"
+ * 5. Dynamic Channel-Specific Tab routing (CBA, DM, AI_Calls, Direct, etc.)
+ * 6. Full 5-Parameter UTM tracking (utm_source, utm_medium, utm_campaign, utm_term, utm_content)
  * ============================================================================
  */
 
 const SHEET_ID = '1qT7Ileqi7KjR8K46DwkfJWliem3yoXoL0ikFuFeQLh8';
 const MASTER_SHEET_NAME = 'Form Responses 1';
+const DUPLICATE_SUB_SHEET_NAME = 'Master_Duplicate_All_Registrations';
 
 const HEADERS = [
   'Timestamp',
@@ -29,6 +34,8 @@ const HEADERS = [
   'Source (utm_source)',
   'Medium (utm_medium)',
   'Campaign (utm_campaign)',
+  'Term (utm_term)',
+  'Content (utm_content)',
   'Landing URL',
   'Pass ID'
 ];
@@ -38,6 +45,9 @@ const CHANNEL_MAP = {
   'im': 'IM',
   'dm': 'DM',
   'cba': 'CBA',
+  'ai_calls': 'AI_Calls',
+  'aicalls': 'AI_Calls',
+  'ai calls': 'AI_Calls',
   'whatsapp': 'WhatsApp',
   'instagram': 'Instagram',
   'principal': 'Principal',
@@ -70,7 +80,9 @@ function normalizeMobile(raw) {
 function doGet(e) {
   return responseJSON({
     status: 'online',
-    service: 'NIAT AI Workshop Registration Web App',
+    service: 'NIAT AI Bootcamp Registration Web App',
+    master_tab: MASTER_SHEET_NAME,
+    duplicate_sub_sheet: DUPLICATE_SUB_SHEET_NAME,
     timestamp: new Date().toISOString()
   });
 }
@@ -94,11 +106,11 @@ function doPost(e) {
     const rawMobile = String(data.mobile || '').trim();
     const normalizedMobile = normalizeMobile(rawMobile);
     const college = String(data.college || '').trim();
-    const address = String(data.address || '').trim();
-    const standard = String(data.standard || '').trim();
-    const state = String(data.state || '').trim();
-    const district = String(data.district || '').trim();
-    const questions = String(data.questions || '').trim();
+    const district = String(data.district || 'Hyderabad').trim();
+    const address = String(data.address || district || 'Hyderabad').trim();
+    const standard = String(data.standard || 'Studying Intermediate 2nd year / 12th standard').trim();
+    const state = String(data.state || 'Telangana').trim();
+    const questions = String(data.questions || 'None').trim();
 
     if (!name || !normalizedMobile || normalizedMobile.length !== 10) {
       return responseJSON({
@@ -119,7 +131,17 @@ function doPost(e) {
       ensureHeaderRow(masterSheet);
     }
 
-    // 2. Strict Duplicate Mobile Check against Master Sheet
+    // 2. Ensure Duplicate Sub-Sheet exists & has headers
+    let subSheet = ss.getSheetByName(DUPLICATE_SUB_SHEET_NAME);
+    if (!subSheet) {
+      subSheet = ss.insertSheet(DUPLICATE_SUB_SHEET_NAME);
+      subSheet.appendRow(HEADERS);
+      subSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    } else {
+      ensureHeaderRow(subSheet);
+    }
+
+    // 3. Strict Duplicate Mobile Check against Master Sheet
     if (isDuplicateMobile(masterSheet, normalizedMobile)) {
       return responseJSON({
         success: false,
@@ -129,7 +151,7 @@ function doPost(e) {
       });
     }
 
-    // 3. Generate unique collision-safe Workshop-XXXX ID
+    // 4. Generate unique collision-safe BOOTCAMP-XXXX ID
     const passId = generateUniquePassId(masterSheet);
     const timestamp = new Date();
 
@@ -149,15 +171,20 @@ function doPost(e) {
       data.utm_source || 'direct',
       data.utm_medium || 'direct',
       data.utm_campaign || 'none',
+      data.utm_term || '',
+      data.utm_content || '',
       data.landing_url || '',
       passId
     ];
 
-    // Append to Master Sheet
+    // 5. Append to Master Sheet
     masterSheet.appendRow(rowData);
 
-    // 4. Append to Channel-Specific Tab (auto-created if missing)
-    if (channelTabName && channelTabName !== MASTER_SHEET_NAME) {
+    // 6. Append to Duplicate Sub-Sheet (Duplicate Dump)
+    subSheet.appendRow(rowData);
+
+    // 7. Append to Channel-Specific Tab (auto-created if missing)
+    if (channelTabName && channelTabName !== MASTER_SHEET_NAME && channelTabName !== DUPLICATE_SUB_SHEET_NAME) {
       let channelSheet = ss.getSheetByName(channelTabName);
       if (!channelSheet) {
         channelSheet = ss.insertSheet(channelTabName);
@@ -173,7 +200,8 @@ function doPost(e) {
       success: true,
       passId: passId,
       name: name,
-      channel: channelTabName
+      channel: channelTabName,
+      subSheetUpdated: true
     });
 
   } catch (err) {
@@ -250,4 +278,45 @@ function generateUniquePassId(sheet) {
   } while (attempts < 100);
 
   return passId;
+}
+
+/**
+ * Utility Function: Backfills all existing rows from Master Sheet to the Duplicate Sub-Sheet
+ * Run this function in Google Apps Script editor to sync all historical records.
+ */
+function syncAllExistingToSubSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const masterSheet = ss.getSheetByName(MASTER_SHEET_NAME);
+  if (!masterSheet || masterSheet.getLastRow() < 2) {
+    Logger.log("No data found in master sheet to sync.");
+    return;
+  }
+
+  let subSheet = ss.getSheetByName(DUPLICATE_SUB_SHEET_NAME);
+  if (!subSheet) {
+    subSheet = ss.insertSheet(DUPLICATE_SUB_SHEET_NAME);
+    subSheet.appendRow(HEADERS);
+    subSheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+  }
+
+  const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, masterSheet.getLastColumn()).getValues();
+  const subRows = subSheet.getLastRow() > 1 ? subSheet.getRange(2, 1, subSheet.getLastRow() - 1, subSheet.getLastColumn()).getValues() : [];
+  
+  const existingMobiles = new Set();
+  subRows.forEach(r => {
+    const mob = normalizeMobile(r[2]);
+    if (mob) existingMobiles.add(mob);
+  });
+
+  let addedCount = 0;
+  masterData.forEach(row => {
+    const mob = normalizeMobile(row[2]);
+    if (!existingMobiles.has(mob)) {
+      subSheet.appendRow(row);
+      existingMobiles.add(mob);
+      addedCount++;
+    }
+  });
+
+  Logger.log(`Successfully synced ${addedCount} historical row(s) to ${DUPLICATE_SUB_SHEET_NAME}.`);
 }

@@ -129,11 +129,21 @@ const registeredStudentState = {
   venue: 'Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad'
 };
 
-// 1. Capture UTM params the moment the page loads
-function getParam(name, fallback) {
+// 1. Capture UTM params the moment the page loads and cache in sessionStorage
+function getParam(name, fallback = "") {
   const params = new URLSearchParams(window.location.search);
   const val = params.get(name);
-  return val && val.trim() !== '' ? val.trim() : fallback;
+  if (val && val.trim() !== '') {
+    try {
+      sessionStorage.setItem(`niat_utm_${name}`, val.trim());
+    } catch (e) {}
+    return val.trim();
+  }
+  try {
+    const cached = sessionStorage.getItem(`niat_utm_${name}`);
+    if (cached && cached.trim() !== '') return cached.trim();
+  } catch (e) {}
+  return fallback;
 }
 
 function populateHiddenFields() {
@@ -144,9 +154,9 @@ function populateHiddenFields() {
   const contentEl = document.getElementById("reg_utm_content");
   const urlEl = document.getElementById("reg_landing_url");
 
-  if (sourceEl) sourceEl.value = getParam("utm_source", "");
-  if (mediumEl) mediumEl.value = getParam("utm_medium", "");
-  if (campaignEl) campaignEl.value = getParam("utm_campaign", "");
+  if (sourceEl) sourceEl.value = getParam("utm_source", "direct");
+  if (mediumEl) mediumEl.value = getParam("utm_medium", "direct");
+  if (campaignEl) campaignEl.value = getParam("utm_campaign", "none");
   if (termEl) termEl.value = getParam("utm_term", "");
   if (contentEl) contentEl.value = getParam("utm_content", "");
   if (urlEl) urlEl.value = window.location.href;
