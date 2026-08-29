@@ -28,6 +28,7 @@ const HEADERS = [
   'Name',
   'Mobile',
   'College',
+  'Available Slots',
   'Address',
   'Standard',
   'State',
@@ -47,6 +48,7 @@ const RECOVERY_HEADERS = [
   'Name',
   'Mobile',
   'College',
+  'Available Slots',
   'Address',
   'Standard',
   'State',
@@ -132,6 +134,7 @@ function doPost(e) {
     const rawMobile = String(data.mobile || '').trim();
     const normalizedMobile = normalizeMobile(rawMobile);
     const college = String(data.college || '').trim();
+    const slot = String(data.slot || data.available_slots || data.available_slot || 'Sunday, 30th August, 2026').trim();
     const standard = String(data.standard || 'Studying Intermediate 2nd year / 12th standard').trim();
 
     // OPTIONAL FIELDS with clean fallbacks (NEVER reject if missing)
@@ -191,6 +194,7 @@ function doPost(e) {
       name,
       normalizedMobile,
       college,
+      slot,
       address,
       standard,
       state,
@@ -390,6 +394,7 @@ function initRecoveryTabAndBackfill() {
       'MD SAQIB',
       '9848012345',
       'Junior College, Hyderabad',
+      'Sunday, 30th August, 2026',
       'Hyderabad',
       'Studying Intermediate 2nd year / 12th standard',
       'Telangana',

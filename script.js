@@ -123,6 +123,7 @@ const registeredStudentState = {
   mobile: '',
   email: '',
   school: '',
+  slot: 'Sunday, 30th August, 2026',
   city: 'Hyderabad',
   passId: '',
   date: '30 August 2026',
@@ -377,13 +378,27 @@ function initRegistrationModal() {
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
+      const slotSelect = document.getElementById("reg_slot");
+      const slotVal = slotSelect ? slotSelect.value.trim() : "";
       const districtInput = document.getElementById("reg_district");
       const districtVal = districtInput ? districtInput.value.trim() : "Hyderabad";
+
+      if (!slotVal) {
+        if (errorBox) {
+          errorBox.innerHTML = "Please select an available slot.";
+          errorBox.style.display = "block";
+        }
+        if (slotSelect) slotSelect.focus();
+        return;
+      }
 
       const payload = {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
         college: collegeInput ? collegeInput.value.trim() : "",
+        slot: slotVal,
+        available_slots: slotVal,
+        available_slot: slotVal,
         address: districtVal || "Hyderabad",
         standard: standardRadio ? standardRadio.value : "",
         state: "Telangana",
@@ -417,6 +432,7 @@ function initRegistrationModal() {
       // POST to Apps Script Web App URL with Content-Type text/plain to avoid CORS preflight
       const submitPromise = fetch(APPS_SCRIPT_URL, {
         method: "POST",
+        redirect: "follow",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       })
@@ -437,9 +453,9 @@ function initRegistrationModal() {
           throw new Error((data && data.error) || "Unable to confirm spreadsheet record");
         });
 
-      // 8.5-second timeout for Apps Script cold starts
+      // 25-second timeout for Apps Script cold starts & multi-tab writes
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Network timeout")), 8500);
+        setTimeout(() => reject(new Error("Network timeout")), 25000);
       });
 
       Promise.race([submitPromise, timeoutPromise])
@@ -449,7 +465,7 @@ function initRegistrationModal() {
             const finalPassId = result.passId;
             saveRegisteredMobile(normalizedMobile);
             saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
-            showSuccessModal(payload.name, finalPassId);
+            showSuccessModal(payload.name, finalPassId, slotVal);
             form.reset();
             populateHiddenFields();
           } else {
@@ -475,14 +491,22 @@ function initRegistrationModal() {
 }
 
 // Stage 2: Displays the Verified Entry Pass in the modal
-function showSuccessModal(studentName, passId) {
+function showSuccessModal(studentName, passId, slot) {
   const cleanName = (studentName || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || generateRandomPassId()).trim().toUpperCase();
+  const cleanSlot = (slot || registeredStudentState.slot || 'Sunday, 30th August, 2026').trim();
 
   registeredStudentState.name = cleanName;
   registeredStudentState.passId = cleanId;
+  registeredStudentState.slot = cleanSlot;
 
-  updatePassDisplay(cleanName, cleanId);
+  if (cleanSlot.includes('6th September') || cleanSlot.includes('September')) {
+    registeredStudentState.date = '6 September 2026';
+  } else {
+    registeredStudentState.date = '30 August 2026';
+  }
+
+  updatePassDisplay(cleanName, cleanId, cleanSlot);
 
   const modal = document.getElementById('registration-modal');
   const stepForm = document.getElementById('modal-step-form');
@@ -507,9 +531,10 @@ function checkVerifiedRegistrationResponse() {
   const hasRegistered = urlParams.get('registered') || urlParams.get('status') === 'success';
   const studentName = urlParams.get('name') || urlParams.get('student_name');
   const passId = urlParams.get('pass_id') || urlParams.get('id');
+  const slot = urlParams.get('slot') || urlParams.get('available_slots');
 
   if (hasRegistered && studentName) {
-    showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId());
+    showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId(), slot ? decodeURIComponent(slot) : '');
   }
 }
 
@@ -524,9 +549,22 @@ function generateRandomPassId() {
 }
 
 // Updates entry pass DOM with 100% dynamic registration data
-function updatePassDisplay(name, passId) {
+function updatePassDisplay(name, passId, slot) {
   const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || registeredStudentState.passId || 'BOOTCAMP-A7K9').trim().toUpperCase();
+  const chosenSlot = (slot || registeredStudentState.slot || 'Sunday, 30th August, 2026').trim();
+
+  let displayDate = '30 AUGUST 2026 · OFFLINE';
+  if (chosenSlot.includes('6th September') || chosenSlot.includes('September')) {
+    displayDate = '6 SEPTEMBER 2026 · OFFLINE';
+  } else if (chosenSlot.includes('30th August') || chosenSlot.includes('August')) {
+    displayDate = '30 AUGUST 2026 · OFFLINE';
+  }
+
+  const dateHolders = document.querySelectorAll('.dynamic-pass-date, .pass-date-val');
+  dateHolders.forEach(el => {
+    el.textContent = displayDate;
+  });
 
   const nameHolders = document.querySelectorAll('.dynamic-student-name');
   nameHolders.forEach(el => {

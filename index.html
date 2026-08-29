@@ -1218,6 +1218,15 @@
           </fieldset>
 
           <div class="form-group">
+            <label for="reg_slot" class="form-label">Available Slots <span class="req-star">*</span></label>
+            <select id="reg_slot" name="slot" class="form-input form-select" required>
+              <option value="" disabled selected>Select an available slot</option>
+              <option value="Sunday, 30th August, 2026">Sunday, 30th August, 2026</option>
+              <option value="Sunday, 6th September, 2026">Sunday, 6th September, 2026</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label for="reg_district" class="form-label">District <span class="req-star">*</span></label>
             <input type="text" id="reg_district" name="district" class="form-input" placeholder="e.g. Hyderabad / Rangareddy" required>
           </div>
@@ -1286,7 +1295,7 @@
             </div>
             <div class="pass-id-item">
               <div class="pass-meta-label">DATE & MODE</div>
-              <div class="pass-date-val">30 AUGUST 2026 · OFFLINE</div>
+              <div class="pass-date-val dynamic-pass-date">30 AUGUST 2026 · OFFLINE</div>
               <div class="pass-time-val">10:00 AM - 5:00 PM</div>
             </div>
           </div>
