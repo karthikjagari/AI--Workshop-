@@ -115,7 +115,7 @@ function initFaqAccordion() {
 }
 
 // Official Google Apps Script Web App Endpoint for Direct Sheet Submission
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKHAeLNMhv94M2N6mizLX24TZBkqSKc83qEHND8BJJUxeER2QY7RX5pp0Frlwq-tnU/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbycADgXAKOh10sHsPWjWwZm0vLvT4RDImIJktx33k6M4o0dPzOlKNlgYNw9OzOjm54L/exec";
 
 // Global student registration state (populated strictly from verified registration response)
 const registeredStudentState = {
@@ -123,12 +123,117 @@ const registeredStudentState = {
   mobile: '',
   email: '',
   school: '',
-  slot: 'Sunday, 30th August, 2026',
+  slot: '',
   city: 'Hyderabad',
   passId: '',
-  date: '30 August 2026',
+  date: '',
   venue: 'Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad'
 };
+
+// ============================================================================
+// DYNAMIC UPCOMING SUNDAYS GENERATOR (Asia/Kolkata timezone)
+// ============================================================================
+const MONTH_NAMES_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function getOrdinalSuffix(day) {
+  if (day >= 11 && day <= 13) return 'th';
+  switch (day % 10) {
+    case 1:  return 'st';
+    case 2:  return 'nd';
+    case 3:  return 'rd';
+    default: return 'th';
+  }
+}
+
+function formatSlotDate(dateObj) {
+  const day = dateObj.getDate();
+  const suffix = getOrdinalSuffix(day);
+  const monthName = MONTH_NAMES_FULL[dateObj.getMonth()];
+  const year = dateObj.getFullYear();
+  return `Sunday, ${day}${suffix} ${monthName}, ${year}`;
+}
+
+function formatPassDateFromSlot(slotString) {
+  if (!slotString) return 'OFFLINE BOOTCAMP';
+  const cleaned = slotString.replace(/^Sunday,\s*/i, '').replace(/(\d+)(st|nd|rd|th)/gi, '$1');
+  const parts = cleaned.trim().split(/[\s,]+/);
+  if (parts.length >= 3) {
+    const day = parts[0];
+    const month = parts[1].toUpperCase();
+    const year = parts[2];
+    return `${day} ${month} ${year} · OFFLINE`;
+  }
+  return `${slotString.toUpperCase()} · OFFLINE`;
+}
+
+function getUpcomingSundays(baseDate) {
+  let today;
+  if (baseDate instanceof Date) {
+    today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  } else {
+    try {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      }).formatToParts(now);
+
+      let y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+      for (const p of parts) {
+        if (p.type === 'year') y = parseInt(p.value, 10);
+        if (p.type === 'month') m = parseInt(p.value, 10) - 1;
+        if (p.type === 'day') d = parseInt(p.value, 10);
+      }
+      today = new Date(y, m, d);
+    } catch (e) {
+      const now = new Date();
+      today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+  }
+
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+  // If today is Monday through Saturday (1-6): days to upcoming Sunday = 7 - dayOfWeek
+  // If today is Sunday (0): today is considered active/passed, so next slot is NEXT Sunday (+7 days)
+  const daysToFirstSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
+
+  const firstSunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToFirstSunday);
+  const secondSunday = new Date(firstSunday.getFullYear(), firstSunday.getMonth(), firstSunday.getDate() + 7);
+
+  return [formatSlotDate(firstSunday), formatSlotDate(secondSunday)];
+}
+
+function populateDynamicSlots() {
+  const slotSelect = document.getElementById("reg_slot");
+  if (!slotSelect) return;
+
+  const currentVal = slotSelect.value;
+  const slots = getUpcomingSundays();
+
+  slotSelect.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.disabled = true;
+  placeholder.selected = !currentVal;
+  placeholder.textContent = "Select an available slot";
+  slotSelect.appendChild(placeholder);
+
+  slots.forEach(slotText => {
+    const opt = document.createElement("option");
+    opt.value = slotText;
+    opt.textContent = slotText;
+    if (currentVal === slotText) {
+      opt.selected = true;
+    }
+    slotSelect.appendChild(opt);
+  });
+}
 
 // 1. Capture UTM params the moment the page loads and cache in sessionStorage
 function getParam(name, fallback = "") {
@@ -174,6 +279,9 @@ function openRegistrationFormModal() {
   // Close any popups currently open
   if (exitModal) exitModal.classList.remove('open');
   if (popup2) popup2.classList.remove('open');
+
+  // Refresh dynamic slots on modal open
+  populateDynamicSlots();
 
   if (modal) {
     if (stepForm) stepForm.style.display = 'block';
@@ -300,6 +408,9 @@ function initRegistrationModal() {
   const form = document.getElementById("workshopRegForm");
   const btn = document.getElementById("regSubmitBtn");
   const errorBox = document.getElementById("regFormError");
+
+  // Populate dynamic upcoming Sunday slots
+  populateDynamicSlots();
 
   // Populate hidden UTM fields immediately
   populateHiddenFields();
@@ -494,17 +605,12 @@ function initRegistrationModal() {
 function showSuccessModal(studentName, passId, slot) {
   const cleanName = (studentName || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || generateRandomPassId()).trim().toUpperCase();
-  const cleanSlot = (slot || registeredStudentState.slot || 'Sunday, 30th August, 2026').trim();
+  const cleanSlot = (slot || registeredStudentState.slot || getUpcomingSundays()[0] || '').trim();
 
   registeredStudentState.name = cleanName;
   registeredStudentState.passId = cleanId;
   registeredStudentState.slot = cleanSlot;
-
-  if (cleanSlot.includes('6th September') || cleanSlot.includes('September')) {
-    registeredStudentState.date = '6 September 2026';
-  } else {
-    registeredStudentState.date = '30 August 2026';
-  }
+  registeredStudentState.date = formatPassDateFromSlot(cleanSlot).replace(/\s*·\s*OFFLINE/i, '');
 
   updatePassDisplay(cleanName, cleanId, cleanSlot);
 
@@ -531,7 +637,7 @@ function checkVerifiedRegistrationResponse() {
   const hasRegistered = urlParams.get('registered') || urlParams.get('status') === 'success';
   const studentName = urlParams.get('name') || urlParams.get('student_name');
   const passId = urlParams.get('pass_id') || urlParams.get('id');
-  const slot = urlParams.get('slot') || urlParams.get('available_slots');
+  const slot = urlParams.get('available_slot') || urlParams.get('slot') || urlParams.get('available_slots');
 
   if (hasRegistered && studentName) {
     showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId(), slot ? decodeURIComponent(slot) : '');
@@ -552,14 +658,9 @@ function generateRandomPassId() {
 function updatePassDisplay(name, passId, slot) {
   const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || registeredStudentState.passId || 'BOOTCAMP-A7K9').trim().toUpperCase();
-  const chosenSlot = (slot || registeredStudentState.slot || 'Sunday, 30th August, 2026').trim();
+  const chosenSlot = (slot || registeredStudentState.slot || getUpcomingSundays()[0] || '').trim();
 
-  let displayDate = '30 AUGUST 2026 · OFFLINE';
-  if (chosenSlot.includes('6th September') || chosenSlot.includes('September')) {
-    displayDate = '6 SEPTEMBER 2026 · OFFLINE';
-  } else if (chosenSlot.includes('30th August') || chosenSlot.includes('August')) {
-    displayDate = '30 AUGUST 2026 · OFFLINE';
-  }
+  const displayDate = formatPassDateFromSlot(chosenSlot);
 
   const dateHolders = document.querySelectorAll('.dynamic-pass-date, .pass-date-val');
   dateHolders.forEach(el => {
