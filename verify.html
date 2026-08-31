@@ -135,7 +135,7 @@
 
         <div>
           <div class="verify-label">DATE & MODE</div>
-          <div class="verify-value">30 August 2026</div>
+          <div id="verified-date" class="verify-value">6 September 2026</div>
           <div style="font-size: 0.82rem; color: #64748B;">Offline (10:00 AM - 5:00 PM)</div>
         </div>
 
@@ -165,9 +165,14 @@
       const params = new URLSearchParams(window.location.search);
       const name = params.get('name') || params.get('student_name') || 'CLASS 12 PARTICIPANT';
       const id = params.get('id') || params.get('pass_id') || 'BOOTCAMP-XXXX';
+      const dateParam = params.get('date') || params.get('slot');
 
       document.getElementById('verified-name').textContent = decodeURIComponent(name).toUpperCase();
       document.getElementById('verified-id').textContent = decodeURIComponent(id).toUpperCase();
+
+      if (dateParam && document.getElementById('verified-date')) {
+        document.getElementById('verified-date').textContent = decodeURIComponent(dateParam).replace(/^Sunday,\s*/i, '');
+      }
     });
   </script>
 </body>

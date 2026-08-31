@@ -10,6 +10,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateWebsiteBootcampDates();
   initNavbarScroll();
   initMobileNavigation();
   initScrollAnimations();
@@ -233,6 +234,120 @@ function populateDynamicSlots() {
     }
     slotSelect.appendChild(opt);
   });
+}
+
+// ============================================================================
+// DYNAMIC WEBSITE BOOTCAMP DATE REPLACER (Asia/Kolkata timezone)
+// Calculates the next upcoming Sunday and updates all website content automatically
+// ============================================================================
+function getNextBootcampSundayDate(baseDate) {
+  let today;
+  if (baseDate instanceof Date) {
+    today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  } else {
+    try {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      }).formatToParts(now);
+
+      let y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+      for (const p of parts) {
+        if (p.type === 'year') y = parseInt(p.value, 10);
+        if (p.type === 'month') m = parseInt(p.value, 10) - 1;
+        if (p.type === 'day') d = parseInt(p.value, 10);
+      }
+      today = new Date(y, m, d);
+    } catch (e) {
+      const now = new Date();
+      today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+  }
+
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const daysToSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToSunday);
+}
+
+function updateWebsiteBootcampDates() {
+  const nextSunday = getNextBootcampSundayDate();
+  const dayNum = nextSunday.getDate();
+  const monthFull = MONTH_NAMES_FULL[nextSunday.getMonth()];
+  const monthShort = monthFull.substring(0, 3);
+  const year = nextSunday.getFullYear();
+
+  const formatUppercase = `${dayNum} ${monthFull.toUpperCase()} ${year}`;
+  const formatNormal = `${dayNum} ${monthFull} ${year}`;
+  const formatSundayFull = `Sunday, ${dayNum} ${monthFull} ${year}`;
+  const formatShort = `${dayNum} ${monthShort} ${year}`;
+  const formatMobileSticky = `${dayNum} ${monthShort} · KKH Nanakramguda, Hyderabad`;
+
+  // 1. Hero Spec Badge
+  const heroSpecBadge = document.querySelector('.hero-event-specs .spec-item .spec-text');
+  if (heroSpecBadge && (heroSpecBadge.textContent.includes('AUGUST') || heroSpecBadge.textContent.includes('SEPTEMBER') || /\d{1,2}\s+[A-Z]+\s+\d{4}/.test(heroSpecBadge.textContent))) {
+    heroSpecBadge.textContent = formatUppercase;
+  }
+
+  // 2. Marquee Ticker
+  document.querySelectorAll('.marquee-item').forEach(el => {
+    if (el.textContent.includes('📅') && el.textContent.includes('(SUNDAY)')) {
+      const dot = el.querySelector('.marquee-dot');
+      el.innerHTML = `📅 ${formatUppercase} (SUNDAY) `;
+      if (dot) el.appendChild(dot);
+      else {
+        const newDot = document.createElement('span');
+        newDot.className = 'marquee-dot';
+        newDot.textContent = '●';
+        el.appendChild(newDot);
+      }
+    }
+  });
+
+  // 3. Event Details Grid Card: Date
+  document.querySelectorAll('.detail-card').forEach(card => {
+    const label = card.querySelector('.detail-card-label');
+    const val = card.querySelector('.detail-card-value');
+    if (label && label.textContent.includes('DATE') && val) {
+      val.textContent = formatNormal;
+    }
+  });
+
+  // 4. FAQ Section Venue & Timing Answer
+  document.querySelectorAll('.faq-item, .faq-answer-content').forEach(faq => {
+    if (faq.innerHTML.includes('Kapil Kavuri Hub (KKH), Nanakramguda')) {
+      faq.innerHTML = faq.innerHTML.replace(
+        /Sunday,\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}/gi,
+        formatSundayFull
+      ).replace(
+        /\d{1,2}\s+August\s+2026/gi,
+        formatNormal
+      );
+    }
+  });
+
+  // 5. Closing Experience CTA Info Pill Bar
+  document.querySelectorAll('.exp-info-pill-item').forEach(el => {
+    if (el.textContent.includes('📅') && (el.textContent.includes('Aug') || el.textContent.includes('Sep') || /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/.test(el.textContent))) {
+      el.innerHTML = `<span>📅</span> ${formatShort}`;
+    }
+  });
+
+  // 6. Mobile Sticky Footer Subtext
+  const mobileStickySub = document.querySelector('.mobile-sticky-sub');
+  if (mobileStickySub) {
+    mobileStickySub.textContent = formatMobileSticky;
+  }
+
+  // 7. Initial Entry Pass Date Display if not registered yet
+  if (!registeredStudentState.slot && !registeredStudentState.name) {
+    const initialPassDates = document.querySelectorAll('.dynamic-pass-date, .pass-date-val');
+    initialPassDates.forEach(el => {
+      el.textContent = `${formatUppercase} · OFFLINE`;
+    });
+  }
 }
 
 // 1. Capture UTM params the moment the page loads and cache in sessionStorage
@@ -1000,7 +1115,8 @@ function drawPassCanvasElements(ctx, logoImg, width, height, padX, innerW, heade
 
   ctx.fillStyle = '#0B1730';
   ctx.font = '800 18px "Space Grotesk", sans-serif';
-  ctx.fillText('30 AUGUST 2026 · OFFLINE', rightX + colW / 2, gridY + 74);
+  const canvasPassDate = formatPassDateFromSlot(registeredStudentState.slot || getUpcomingSundays()[0]);
+  ctx.fillText(canvasPassDate, rightX + colW / 2, gridY + 74);
 
   ctx.fillStyle = '#059669';
   ctx.font = '750 15px "JetBrains Mono", monospace';
@@ -1057,7 +1173,7 @@ function initCalendarGenerator() {
       const details = encodeURIComponent('Free Offline AI Bootcamp for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
       const location = encodeURIComponent('Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad');
       
-      const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20260830T043000Z/20260830T113000Z&details=${details}&location=${location}`;
+      const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
       window.open(gCalUrl, '_blank');
     });
   });
@@ -1070,7 +1186,8 @@ function initWhatsAppShare() {
   shareBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (30 Aug 2026 at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
+      const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
