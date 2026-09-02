@@ -492,28 +492,7 @@ function saveRegisteredMobile(mobile) {
 }
 
 function showDuplicateRegistrationMessage() {
-  const errorBox = document.getElementById("regFormError");
-  const mobileInput = document.getElementById("reg_mobile");
-  const btn = document.getElementById("regSubmitBtn");
-
-  if (errorBox) {
-    errorBox.innerHTML = "This mobile number is already registered.";
-    errorBox.style.display = 'block';
-    errorBox.style.background = '#FEF2F2';
-    errorBox.style.borderColor = '#FECACA';
-    errorBox.style.color = '#991B1B';
-    errorBox.style.fontWeight = '700';
-    errorBox.style.fontSize = '0.92rem';
-  }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.innerHTML = "<span>Reserve My Free Seat →</span>";
-  }
-
-  if (mobileInput) {
-    mobileInput.focus();
-  }
+  // Bypassed: Duplicate mobile registrations are allowed and reuse existing Pass ID
 }
 
 // 6. Registration Flow & Native Form Submission Handler
@@ -595,12 +574,6 @@ function initRegistrationModal() {
         return;
       }
 
-      // Check if mobile number already registered in local records
-      if (getRegisteredMobiles().includes(normalizedMobile)) {
-        showDuplicateRegistrationMessage();
-        return;
-      }
-
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
@@ -667,14 +640,11 @@ function initRegistrationModal() {
           return res.json();
         })
         .then(data => {
-          if (data && data.duplicate) {
-            saveRegisteredMobile(normalizedMobile);
-            showDuplicateRegistrationMessage();
-            return { isDuplicate: true };
-          }
           if (data && data.success && data.passId) {
-            saveRegisteredMobile(normalizedMobile);
-            return { isDuplicate: false, passId: data.passId };
+            return { passId: data.passId };
+          }
+          if (data && data.passId) {
+            return { passId: data.passId };
           }
           throw new Error((data && data.error) || "Unable to confirm spreadsheet record");
         });
@@ -686,10 +656,8 @@ function initRegistrationModal() {
 
       Promise.race([submitPromise, timeoutPromise])
         .then(result => {
-          if (result && result.isDuplicate) return;
           if (result && result.passId) {
             const finalPassId = result.passId;
-            saveRegisteredMobile(normalizedMobile);
             saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
             showSuccessModal(payload.name, finalPassId, slotVal);
             form.reset();
