@@ -204,9 +204,9 @@ function getUpcomingSundays(baseDate) {
   const daysToFirstSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
 
   const firstSunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToFirstSunday);
-  const secondSunday = new Date(firstSunday.getFullYear(), firstSunday.getMonth(), firstSunday.getDate() + 7);
 
-  return [formatSlotDate(firstSunday), formatSlotDate(secondSunday)];
+  // Return exactly ONE single upcoming Sunday slot
+  return [formatSlotDate(firstSunday)];
 }
 
 function populateDynamicSlots() {
