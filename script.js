@@ -492,7 +492,28 @@ function saveRegisteredMobile(mobile) {
 }
 
 function showDuplicateRegistrationMessage() {
-  // Bypassed: Duplicate mobile registrations are allowed and reuse existing Pass ID
+  const errorBox = document.getElementById("regFormError");
+  const mobileInput = document.getElementById("reg_mobile");
+  const btn = document.getElementById("regSubmitBtn");
+
+  if (errorBox) {
+    errorBox.innerHTML = "This mobile number is already registered.";
+    errorBox.style.display = 'block';
+    errorBox.style.background = '#FEF2F2';
+    errorBox.style.borderColor = '#FECACA';
+    errorBox.style.color = '#991B1B';
+    errorBox.style.fontWeight = '700';
+    errorBox.style.fontSize = '0.92rem';
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = "<span>Reserve My Free Seat →</span>";
+  }
+
+  if (mobileInput) {
+    mobileInput.focus();
+  }
 }
 
 // 6. Registration Flow & Native Form Submission Handler
@@ -574,6 +595,12 @@ function initRegistrationModal() {
         return;
       }
 
+      // Check if mobile number already registered in local records
+      if (getRegisteredMobiles().includes(normalizedMobile)) {
+        showDuplicateRegistrationMessage();
+        return;
+      }
+
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
@@ -612,10 +639,38 @@ function initRegistrationModal() {
         submitted_at: new Date().toISOString()
       };
 
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = "<span>Submitting Registration...</span>";
+      // Dynamic Sequential Progress Experience Timers
+      const progressTimeouts = [];
+      function clearProgressTimers() {
+        while (progressTimeouts.length > 0) {
+          clearTimeout(progressTimeouts.pop());
+        }
       }
+
+      function startProgressExperience() {
+        clearProgressTimers();
+        if (!btn) return;
+        btn.disabled = true;
+
+        // Step 1: Immediate confirmation
+        btn.innerHTML = "<span>Confirming your registration...</span>";
+
+        // Step 2 (~1.4s): Generating entry pass
+        progressTimeouts.push(setTimeout(() => {
+          if (btn && btn.disabled) {
+            btn.innerHTML = "<span>Generating your entry pass...</span>";
+          }
+        }, 1400));
+
+        // Step 3 (~3.0s): Almost done
+        progressTimeouts.push(setTimeout(() => {
+          if (btn && btn.disabled) {
+            btn.innerHTML = "<span>Almost done...</span>";
+          }
+        }, 3000));
+      }
+
+      startProgressExperience();
 
       // Helper to store registration in localStorage
       function saveLocalBackup(record) {
@@ -640,11 +695,14 @@ function initRegistrationModal() {
           return res.json();
         })
         .then(data => {
-          if (data && data.success && data.passId) {
-            return { passId: data.passId };
+          if (data && data.duplicate) {
+            saveRegisteredMobile(normalizedMobile);
+            showDuplicateRegistrationMessage();
+            return { isDuplicate: true };
           }
-          if (data && data.passId) {
-            return { passId: data.passId };
+          if (data && data.success && data.passId) {
+            saveRegisteredMobile(normalizedMobile);
+            return { isDuplicate: false, passId: data.passId };
           }
           throw new Error((data && data.error) || "Unable to confirm spreadsheet record");
         });
@@ -655,26 +713,47 @@ function initRegistrationModal() {
       });
 
       Promise.race([submitPromise, timeoutPromise])
-        .then(result => {
+        .then(async result => {
+          clearProgressTimers();
+          if (result && result.isDuplicate) {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = "<span>Reserve My Free Seat →</span>";
+            }
+            return;
+          }
           if (result && result.passId) {
             const finalPassId = result.passId;
+            saveRegisteredMobile(normalizedMobile);
             saveLocalBackup({ ...payload, passId: finalPassId, synced: true });
+
+            // Visual confirmation ONLY after server confirmed successful registration
+            if (btn) {
+              btn.innerHTML = "<span>Registration confirmed ✓</span>";
+            }
+
+            // Short visual feedback before displaying the official digital pass
+            await new Promise(r => setTimeout(r, 600));
+
             showSuccessModal(payload.name, finalPassId, slotVal);
             form.reset();
             populateHiddenFields();
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = "<span>Reserve My Free Seat →</span>";
+            }
           } else {
             throw new Error("Missing confirmed pass ID from registration server.");
           }
         })
         .catch(err => {
+          clearProgressTimers();
           console.error("Apps Script registration error:", err);
           saveLocalBackup({ ...payload, passId: generateRandomPassId(), synced: false });
           if (errorBox) {
             errorBox.innerHTML = "Unable to complete registration with the server. Please check your internet connection and click 'Reserve My Free Seat' to retry.";
             errorBox.style.display = "block";
           }
-        })
-        .finally(() => {
           if (btn) {
             btn.disabled = false;
             btn.innerHTML = "<span>Reserve My Free Seat →</span>";
