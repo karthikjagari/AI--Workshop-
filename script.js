@@ -1234,7 +1234,7 @@ function initWhatsAppShare() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
-      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/EcTyLUw23LiEl4uJvqQPqr`;
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/Il1OgGYrSTCDq4ExpcVF7y`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
