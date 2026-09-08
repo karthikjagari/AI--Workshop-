@@ -1200,6 +1200,11 @@
             <input type="text" id="reg_college" name="college" class="form-input" placeholder="Please mention full name of School/College" required>
           </div>
 
+          <div class="form-group">
+            <label for="reg_location" class="form-label">School/College Location <span class="req-star">*</span></label>
+            <input type="text" id="reg_location" name="location" class="form-input" placeholder="e.g. Kukatpally / Madhapur / Secunderabad" required>
+          </div>
+
           <fieldset class="form-group radio-fieldset">
             <legend class="form-label">Standard <span class="req-star">*</span></legend>
             <div class="radio-options-wrap">
@@ -1219,15 +1224,25 @@
           </fieldset>
 
           <div class="form-group">
-            <label for="reg_slot" class="form-label">Available Slots <span class="req-star">*</span></label>
-            <select id="reg_slot" name="slot" class="form-input form-select" required>
-              <option value="" disabled selected>Select an available slot</option>
+            <label for="reg_stream" class="form-label">Educational Stream <span class="req-star">*</span></label>
+            <select id="reg_stream" name="stream" class="form-input form-select" required>
+              <option value="" disabled selected>Select your stream</option>
+              <option value="MPC / PCM (Maths Background)">MPC / PCM (Maths Background)</option>
+              <option value="BiPC / PCB (Biology Background)">BiPC / PCB (Biology Background)</option>
+              <option value="PCBM (Maths + Biology Background)">PCBM (Maths + Biology Background)</option>
+              <option value="PCM + CS (Maths + Computer Science)">PCM + CS (Maths + Computer Science)</option>
+              <option value="PCM + E (Maths + Electronics)">PCM + E (Maths + Electronics)</option>
+              <option value="PCM + S (Maths + Statistics)">PCM + S (Maths + Statistics)</option>
+              <option value="Commerce">Commerce</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="reg_district" class="form-label">District <span class="req-star">*</span></label>
-            <input type="text" id="reg_district" name="district" class="form-input" placeholder="e.g. Hyderabad / Rangareddy" required>
+            <label for="reg_slot" class="form-label">Available Slots <span class="req-star">*</span></label>
+            <select id="reg_slot" name="slot" class="form-input form-select" required>
+              <option value="" disabled selected>Select an available slot</option>
+            </select>
           </div>
 
           <!-- Honeypot: keep hidden from real users via CSS, not just attribute -->

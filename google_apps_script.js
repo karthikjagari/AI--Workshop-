@@ -7,7 +7,9 @@ var HEADERS = [
   "Name",
   "Mobile",
   "School/College Name",
+  "School/College Location",
   "Standard",
+  "Educational Stream",
   "Available Slot",
   "Source (utm_source)",
   "Medium (utm_medium)",
@@ -27,12 +29,29 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
 
-    // Required fields from the registration form
+    // Normalize field values and aliases
+    var location = (data.college_location || data.location || data["School/College Location"] || "").toString().trim();
+    var stream = (data.educational_stream || data.stream || data["Educational Stream"] || "").toString().trim();
+    var college = (data.college || data.college_name || data["School/College Name"] || "").toString().trim();
+    var standard = (data.standard || "").toString().trim();
+    var slot = (data.available_slot || data.slot || data.available_slots || "").toString().trim();
+
+    data.college_location = location;
+    data.location = location;
+    data.educational_stream = stream;
+    data.stream = stream;
+    data.college = college;
+    data.standard = standard;
+    data.available_slot = slot;
+
+    // Required fields from the registration form (No state, No district)
     var required = [
       "name",
       "mobile",
       "college",
+      "college_location",
       "standard",
+      "educational_stream",
       "available_slot"
     ];
 
@@ -70,24 +89,31 @@ function doPost(e) {
         .substring(0, 4)
         .toUpperCase();
 
-    // Registration row matching HEADERS order
-    var row = [
-      new Date(),
-      data.name.toString().trim(),
-      mobile,
-      data.college.toString().trim(),
-      data.standard.toString().trim(),
-      data.available_slot.toString().trim(),
-      data.utm_source || "direct",
-      data.utm_medium || "direct",
-      data.utm_campaign || "none",
-      data.landing_url || "",
-      passId
-    ];
+    // Normalized record object for safe column mapping
+    var rowRecord = {
+      timestamp: new Date(),
+      name: data.name.toString().trim(),
+      mobile: mobile,
+      college: college,
+      college_location: location,
+      location: location,
+      address: location,
+      standard: standard,
+      educational_stream: stream,
+      stream: stream,
+      available_slot: slot,
+      slot: slot,
+      utm_source: data.utm_source || "direct",
+      utm_medium: data.utm_medium || "direct",
+      utm_campaign: data.utm_campaign || "none",
+      landing_url: data.landing_url || "",
+      passId: passId
+    };
 
     // Master registration sheet write
     var master = getOrCreateSheet(ss, MASTER_TAB);
-    master.appendRow(row);
+    var masterRow = buildRowForSheet(master, rowRecord);
+    master.appendRow(masterRow);
 
     // Channel-specific sheet write
     var channel = normalizeChannelName(
@@ -98,7 +124,8 @@ function doPost(e) {
       ss,
       channel
     );
-    channelSheet.appendRow(row);
+    var channelRow = buildRowForSheet(channelSheet, rowRecord);
+    channelSheet.appendRow(channelRow);
 
     // Return success only after both Sheet writes succeed
     return jsonResponse({
@@ -112,6 +139,49 @@ function doPost(e) {
       error: err.message
     });
   }
+}
+
+function buildRowForSheet(sheet, record) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return [];
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var row = new Array(headers.length);
+
+  for (var i = 0; i < headers.length; i++) {
+    var h = headers[i].toString().toLowerCase().trim();
+    if (h.indexOf("timestamp") !== -1 || h.indexOf("time") !== -1) {
+      row[i] = record.timestamp;
+    } else if (h.indexOf("pass") !== -1 || h.indexOf("bootcamp id") !== -1) {
+      row[i] = record.passId;
+    } else if (h.indexOf("mobile") !== -1 || h.indexOf("phone") !== -1) {
+      row[i] = record.mobile;
+    } else if (h.indexOf("location") !== -1 || h.indexOf("place") !== -1) {
+      row[i] = record.college_location || record.location;
+    } else if (h.indexOf("address") !== -1) {
+      row[i] = record.address || record.college_location || record.location;
+    } else if (h.indexOf("stream") !== -1 || h.indexOf("branch") !== -1) {
+      row[i] = record.educational_stream || record.stream;
+    } else if (h.indexOf("standard") !== -1 || h.indexOf("class") !== -1 || h.indexOf("grade") !== -1) {
+      row[i] = record.standard;
+    } else if (h.indexOf("college") !== -1 || h.indexOf("school") !== -1) {
+      row[i] = record.college;
+    } else if (h.indexOf("slot") !== -1) {
+      row[i] = record.available_slot || record.slot;
+    } else if (h.indexOf("source") !== -1) {
+      row[i] = record.utm_source;
+    } else if (h.indexOf("medium") !== -1) {
+      row[i] = record.utm_medium;
+    } else if (h.indexOf("campaign") !== -1) {
+      row[i] = record.utm_campaign;
+    } else if (h.indexOf("url") !== -1 || h.indexOf("landing") !== -1) {
+      row[i] = record.landing_url;
+    } else if (h.indexOf("name") !== -1) {
+      row[i] = record.name;
+    } else {
+      row[i] = "";
+    }
+  }
+  return row;
 }
 
 function getOrCreateSheet(ss, name) {
@@ -130,30 +200,66 @@ function getOrCreateSheet(ss, name) {
     return sheet;
   }
 
-  // Auto-insert "Available Slot" column in Row 1 if missing from existing sheet
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var hasSlot = headers.some(function(h) {
-    return h.toString().toLowerCase().indexOf("slot") !== -1;
-  });
+  ensureSheetHeaders(sheet);
+  return sheet;
+}
 
-  if (!hasSlot) {
-    var standardIdx = -1;
+function ensureSheetHeaders(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return;
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  function findIndex(term) {
     for (var i = 0; i < headers.length; i++) {
-      if (headers[i].toString().toLowerCase().indexOf("standard") !== -1) {
-        standardIdx = i;
-        break;
-      }
+      if (headers[i].toString().toLowerCase().indexOf(term) !== -1) return i;
     }
-    if (standardIdx !== -1) {
-      sheet.insertColumnAfter(standardIdx + 1);
-      sheet.getRange(1, standardIdx + 2).setValue("Available Slot").setFontWeight("bold");
-    } else {
-      sheet.insertColumnAfter(5);
-      sheet.getRange(1, 6).setValue("Available Slot").setFontWeight("bold");
-    }
+    return -1;
   }
 
-  return sheet;
+  // 1. Ensure "School/College Location" column exists after College Name
+  var locIdx = findIndex("location");
+  if (locIdx === -1) {
+    var collegeIdx = findIndex("college");
+    if (collegeIdx === -1) collegeIdx = findIndex("school");
+    if (collegeIdx !== -1) {
+      sheet.insertColumnAfter(collegeIdx + 1);
+      sheet.getRange(1, collegeIdx + 2).setValue("School/College Location").setFontWeight("bold");
+    } else {
+      sheet.insertColumnAfter(4);
+      sheet.getRange(1, 5).setValue("School/College Location").setFontWeight("bold");
+    }
+    lastCol = sheet.getLastColumn();
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  }
+
+  // 2. Ensure "Educational Stream" column exists after Standard
+  var streamIdx = findIndex("stream");
+  if (streamIdx === -1) {
+    var standardIdx = findIndex("standard");
+    if (standardIdx !== -1) {
+      sheet.insertColumnAfter(standardIdx + 1);
+      sheet.getRange(1, standardIdx + 2).setValue("Educational Stream").setFontWeight("bold");
+    } else {
+      sheet.insertColumnAfter(6);
+      sheet.getRange(1, 7).setValue("Educational Stream").setFontWeight("bold");
+    }
+    lastCol = sheet.getLastColumn();
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  }
+
+  // 3. Ensure "Available Slot" column exists
+  var slotIdx = findIndex("slot");
+  if (slotIdx === -1) {
+    var streamColIdx = findIndex("stream");
+    if (streamColIdx !== -1) {
+      sheet.insertColumnAfter(streamColIdx + 1);
+      sheet.getRange(1, streamColIdx + 2).setValue("Available Slot").setFontWeight("bold");
+    } else {
+      sheet.insertColumnAfter(7);
+      sheet.getRange(1, 8).setValue("Available Slot").setFontWeight("bold");
+    }
+  }
 }
 
 function normalizeChannelName(raw) {

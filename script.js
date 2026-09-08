@@ -603,11 +603,22 @@ function initRegistrationModal() {
 
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
+      const locationInput = document.getElementById("reg_location");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
+      const streamSelect = document.getElementById("reg_stream");
       const slotSelect = document.getElementById("reg_slot");
       const slotVal = slotSelect ? slotSelect.value.trim() : "";
-      const districtInput = document.getElementById("reg_district");
-      const districtVal = districtInput ? districtInput.value.trim() : "Hyderabad";
+      const locationVal = locationInput ? locationInput.value.trim() : "";
+      const streamVal = streamSelect ? streamSelect.value.trim() : "";
+
+      if (!streamVal) {
+        if (errorBox) {
+          errorBox.innerHTML = "Please select your educational stream.";
+          errorBox.style.display = "block";
+        }
+        if (streamSelect) streamSelect.focus();
+        return;
+      }
 
       if (!slotVal) {
         if (errorBox) {
@@ -622,19 +633,17 @@ function initRegistrationModal() {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
         college: collegeInput ? collegeInput.value.trim() : "",
-        slot: slotVal,
-        available_slots: slotVal,
-        available_slot: slotVal,
-        address: districtVal || "Hyderabad",
+        college_location: locationVal,
+        location: locationVal,
+        address: locationVal,
         standard: standardRadio ? standardRadio.value : "",
-        state: "Telangana",
-        district: districtVal,
-        questions: "None",
+        educational_stream: streamVal,
+        stream: streamVal,
+        available_slot: slotVal,
+        slot: slotVal,
         utm_source: (document.getElementById("reg_utm_source") || {}).value || "",
         utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "",
         utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "",
-        utm_term: (document.getElementById("reg_utm_term") || {}).value || "",
-        utm_content: (document.getElementById("reg_utm_content") || {}).value || "",
         landing_url: (document.getElementById("reg_landing_url") || {}).value || window.location.href,
         submitted_at: new Date().toISOString()
       };
