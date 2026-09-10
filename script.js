@@ -475,7 +475,13 @@ function normalizeMobile(raw) {
 
 function getRegisteredMobiles() {
   try {
-    return JSON.parse(localStorage.getItem('niat_registered_mobiles') || '[]');
+    const list = JSON.parse(localStorage.getItem('niat_registered_mobiles') || '[]');
+    const backups = JSON.parse(localStorage.getItem('niat_registrations') || '[]');
+    backups.forEach(b => {
+      const m = normalizeMobile(b.mobile);
+      if (m && !list.includes(m)) list.push(m);
+    });
+    return list;
   } catch (e) {
     return [];
   }
@@ -497,13 +503,15 @@ function showDuplicateRegistrationMessage() {
   const btn = document.getElementById("regSubmitBtn");
 
   if (errorBox) {
-    errorBox.innerHTML = "This mobile number is already registered.";
+    errorBox.innerHTML = '<div style="font-weight:700; font-size:0.96rem; margin-bottom:4px;">⚠️ You’re Already Registered!</div> <div style="font-size:0.88rem; color:#7F1D1D;">This mobile number is already registered for the AI Bootcamp.</div>';
     errorBox.style.display = 'block';
     errorBox.style.background = '#FEF2F2';
     errorBox.style.borderColor = '#FECACA';
     errorBox.style.color = '#991B1B';
-    errorBox.style.fontWeight = '700';
-    errorBox.style.fontSize = '0.92rem';
+    errorBox.style.padding = '0.75rem 1rem';
+    errorBox.style.borderRadius = '8px';
+    errorBox.style.textAlign = 'center';
+    errorBox.style.lineHeight = '1.4';
   }
 
   if (btn) {
@@ -560,6 +568,22 @@ function initRegistrationModal() {
       openRegistrationFormModal();
     });
   });
+
+  // Live duplicate checking on mobile input
+  const mobileInputEl = document.getElementById("reg_mobile");
+  if (mobileInputEl) {
+    mobileInputEl.addEventListener("input", function () {
+      if (errorBox && (errorBox.innerHTML.includes("Already Registered") || errorBox.innerHTML.includes("already registered"))) {
+        errorBox.style.display = "none";
+      }
+    });
+    mobileInputEl.addEventListener("blur", function () {
+      const norm = normalizeMobile(mobileInputEl.value.trim());
+      if (norm.length === 10 && getRegisteredMobiles().includes(norm)) {
+        showDuplicateRegistrationMessage();
+      }
+    });
+  }
 
   // Handle Form Submission directly to Apps Script Web App
   if (form) {
@@ -704,7 +728,7 @@ function initRegistrationModal() {
           return res.json();
         })
         .then(data => {
-          if (data && data.duplicate) {
+          if (data && (data.duplicate || (data.message && data.message.includes("Already Registered")) || (data.error && data.error.includes("Already Registered")))) {
             saveRegisteredMobile(normalizedMobile);
             showDuplicateRegistrationMessage();
             return { isDuplicate: true };
@@ -713,7 +737,7 @@ function initRegistrationModal() {
             saveRegisteredMobile(normalizedMobile);
             return { isDuplicate: false, passId: data.passId };
           }
-          throw new Error((data && data.error) || "Unable to confirm spreadsheet record");
+          throw new Error((data && (data.message || data.error)) || "Unable to confirm spreadsheet record");
         });
 
       // 25-second timeout for Apps Script cold starts & multi-tab writes
@@ -758,7 +782,11 @@ function initRegistrationModal() {
         .catch(err => {
           clearProgressTimers();
           console.error("Apps Script registration error:", err);
-          saveLocalBackup({ ...payload, passId: generateRandomPassId(), synced: false });
+          if (err && err.message && (err.message.includes("Already Registered") || err.message.includes("already registered") || err.message.includes("duplicate"))) {
+            saveRegisteredMobile(normalizedMobile);
+            showDuplicateRegistrationMessage();
+            return;
+          }
           if (errorBox) {
             errorBox.innerHTML = "Unable to complete registration with the server. Please check your internet connection and click 'Reserve My Free Seat' to retry.";
             errorBox.style.display = "block";

@@ -68,10 +68,17 @@ function doPost(e) {
       }
     }
 
-    // Validate mobile number
+    // Validate and normalize mobile number
     var mobile = data.mobile
       .toString()
-      .replace(/\s+/g, "");
+      .replace(/\D/g, "");
+    if (mobile.length === 11 && mobile.indexOf("0") === 0) {
+      mobile = mobile.substring(1);
+    } else if (mobile.length === 12 && mobile.indexOf("91") === 0) {
+      mobile = mobile.substring(2);
+    } else if (mobile.length > 10) {
+      mobile = mobile.slice(-10);
+    }
 
     if (!/^[0-9]{10}$/.test(mobile)) {
       return jsonResponse({
@@ -82,7 +89,19 @@ function doPost(e) {
 
     var ss = SpreadsheetApp.openById(SHEET_ID);
 
-    // Generate unique Bootcamp Pass ID
+    // Master registration sheet
+    var master = getOrCreateSheet(ss, MASTER_TAB);
+
+    // Check if mobile number is already registered
+    if (isMobileAlreadyRegistered(master, mobile)) {
+      return jsonResponse({
+        success: false,
+        duplicate: true,
+        message: "⚠️ You’re Already Registered! This mobile number is already registered for the AI Bootcamp."
+      });
+    }
+
+    // Generate unique Bootcamp Pass ID only for new registrations
     var passId =
       "BOOTCAMP-" +
       Utilities.getUuid()
@@ -111,7 +130,6 @@ function doPost(e) {
     };
 
     // Master registration sheet write
-    var master = getOrCreateSheet(ss, MASTER_TAB);
     var masterRow = buildRowForSheet(master, rowRecord);
     master.appendRow(masterRow);
 
@@ -296,3 +314,45 @@ function jsonResponse(obj) {
       ContentService.MimeType.JSON
     );
 }
+
+function isMobileAlreadyRegistered(sheet, targetMobile) {
+  try {
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return false;
+
+    var lastCol = sheet.getLastColumn();
+    if (lastCol === 0) return false;
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var mobileCol = -1;
+
+    for (var i = 0; i < headers.length; i++) {
+      var h = headers[i].toString().toLowerCase();
+      if (h.indexOf("mobile") !== -1 || h.indexOf("phone") !== -1) {
+        mobileCol = i + 1;
+        break;
+      }
+    }
+
+    if (mobileCol === -1) mobileCol = 3;
+
+    var mobileValues = sheet.getRange(2, mobileCol, lastRow - 1, 1).getValues();
+    var cleanTarget = targetMobile.toString().replace(/\D/g, "");
+    if (cleanTarget.length > 10) cleanTarget = cleanTarget.slice(-10);
+
+    for (var r = 0; r < mobileValues.length; r++) {
+      var cell = mobileValues[r][0];
+      if (cell !== undefined && cell !== null && cell !== "") {
+        var cleanCell = cell.toString().replace(/\D/g, "");
+        if (cleanCell.length > 10) cleanCell = cleanCell.slice(-10);
+        if (cleanCell === cleanTarget && cleanTarget.length === 10) {
+          return true;
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("Error checking duplicate mobile: " + err.message);
+  }
+  return false;
+}
+
