@@ -128,7 +128,7 @@ const registeredStudentState = {
   city: 'Hyderabad',
   passId: '',
   date: '',
-  venue: 'Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad'
+  venue: 'Nanakramguda, Hyderabad'
 };
 
 // ============================================================================
@@ -283,7 +283,7 @@ function updateWebsiteBootcampDates() {
   const formatNormal = `${dayNum} ${monthFull} ${year}`;
   const formatSundayFull = `Sunday, ${dayNum} ${monthFull} ${year}`;
   const formatShort = `${dayNum} ${monthShort} ${year}`;
-  const formatMobileSticky = `${dayNum} ${monthShort} · KKH Nanakramguda, Hyderabad`;
+  const formatMobileSticky = `${dayNum} ${monthShort} · Nanakramguda, Hyderabad`;
 
   // 1. Hero Spec Badge
   const heroSpecBadge = document.querySelector('.hero-event-specs .spec-item .spec-text');
@@ -317,7 +317,7 @@ function updateWebsiteBootcampDates() {
 
   // 4. FAQ Section Venue & Timing Answer
   document.querySelectorAll('.faq-item, .faq-answer-content').forEach(faq => {
-    if (faq.innerHTML.includes('Kapil Kavuri Hub (KKH), Nanakramguda')) {
+    if (faq.innerHTML.includes('Nanakramguda, Hyderabad')) {
       faq.innerHTML = faq.innerHTML.replace(
         /Sunday,\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}/gi,
         formatSundayFull
@@ -1219,7 +1219,7 @@ function drawPassCanvasElements(ctx, logoImg, width, height, padX, innerW, heade
   ctx.fillStyle = '#334155';
   ctx.font = '750 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('🏛️ KAPIL KAVURI HUB (KKH)   •   HYDERABAD   •   VALID ENTRY PASS', width / 2, stripY + 31);
+  ctx.fillText('🏛️ Nanakramguda, Hyderabad   •   VALID ENTRY PASS', width / 2, stripY + 31);
 
   ctx.restore();
 
@@ -1255,7 +1255,7 @@ function initCalendarGenerator() {
       e.preventDefault();
       const title = encodeURIComponent('NIAT Free Offline AI Bootcamp (Class 12)');
       const details = encodeURIComponent('Free Offline AI Bootcamp for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
-      const location = encodeURIComponent('Kapil Kavuri Hub (KKH), Nanakramguda, Financial District, Hyderabad');
+      const location = encodeURIComponent('Nanakramguda, Hyderabad');
       
       const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
       window.open(gCalUrl, '_blank');
@@ -1271,7 +1271,7 @@ function initWhatsAppShare() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
-      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at KKH Campus)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/JWHzbY42iBS7qeCNyrKr1T`;
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at Nanakramguda, Hyderabad)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/CGuPQbkiMls506Uy4bIlP1`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });

@@ -18,6 +18,49 @@ var HEADERS = [
   "Pass ID"
 ];
 
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var master = ss.getSheetByName(MASTER_TAB);
+    var lastRow = master ? master.getLastRow() : 0;
+    var sheets = ss.getSheets().map(function(s) { return s.getName(); });
+
+    var recent = [];
+    if (master && lastRow > 1) {
+      var startRow = Math.max(2, lastRow - 9);
+      var numRows = lastRow - startRow + 1;
+      var lastCol = master.getLastColumn();
+      var values = master.getRange(startRow, 1, numRows, lastCol).getValues();
+      for (var i = values.length - 1; i >= 0; i--) {
+        var row = values[i];
+        recent.push({
+          timestamp: row[0],
+          name: row[1],
+          mobile: row[2],
+          college: row[3],
+          passId: row[row.length - 1]
+        });
+      }
+    }
+
+    return jsonResponse({
+      status: "active",
+      spreadsheetId: SHEET_ID,
+      spreadsheetName: ss.getName(),
+      spreadsheetUrl: "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/edit",
+      masterTab: MASTER_TAB,
+      totalRegistrations: lastRow > 1 ? lastRow - 1 : 0,
+      existingTabs: sheets,
+      recentRegistrations: recent
+    });
+  } catch (err) {
+    return jsonResponse({
+      status: "error",
+      error: err.message
+    });
+  }
+}
+
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
@@ -281,11 +324,22 @@ function ensureSheetHeaders(sheet) {
 }
 
 function normalizeChannelName(raw) {
+  var key = raw
+    .toString()
+    .toLowerCase()
+    .trim();
+
+  // Automatically route any CBA campaign (cba-pasha, cba_call, cba-xyz, etc.) to the main CBA tab
+  if (key === "cba" || key.indexOf("cba") === 0) {
+    return "CBA";
+  }
+
   var map = {
     "im": "IM",
     "dm": "DM",
-    "cba_call": "CBA",
     "cba": "CBA",
+    "cba_call": "CBA",
+    "cba-pasha": "CBA",
     "whatsapp": "WhatsApp",
     "instagram": "Instagram",
     "principal": "Principal",
@@ -295,11 +349,6 @@ function normalizeChannelName(raw) {
     "ai_calls": "AI_Calls",
     "direct": "Direct"
   };
-
-  var key = raw
-    .toString()
-    .toLowerCase()
-    .trim();
 
   return map[key] ||
     raw.toString().trim();
