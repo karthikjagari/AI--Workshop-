@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initHorizontalCurriculumSlider();
   initMobileScrollPopups();
   initBackgroundSyncWorker();
+  updateDynamicWhatsAppCommunityLink();
+  initRealtimeCutoffChecker();
 });
 
 // 1. Sticky Header Scroll Indicator
@@ -170,43 +172,94 @@ function formatPassDateFromSlot(slotString) {
   return `${slotString.toUpperCase()} · OFFLINE`;
 }
 
-function getUpcomingSundays(baseDate) {
-  let today;
-  if (baseDate instanceof Date) {
-    today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-  } else {
-    try {
-      const now = new Date();
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      }).formatToParts(now);
-
-      let y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
-      for (const p of parts) {
-        if (p.type === 'year') y = parseInt(p.value, 10);
-        if (p.type === 'month') m = parseInt(p.value, 10) - 1;
-        if (p.type === 'day') d = parseInt(p.value, 10);
-      }
-      today = new Date(y, m, d);
-    } catch (e) {
-      const now = new Date();
-      today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    }
+// Extracts exact year, month, day, hour (0-23), minute, second in Asia/Kolkata (IST)
+function getISTDateComponents(baseDate) {
+  let dateToUse = baseDate;
+  const isDate = dateToUse && (dateToUse instanceof Date || Object.prototype.toString.call(dateToUse) === '[object Date]');
+  if (!isDate || isNaN(dateToUse.getTime())) {
+    dateToUse = new Date();
   }
 
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hourCycle: 'h23'
+    });
 
-  // If today is Monday through Saturday (1-6): days to upcoming Sunday = 7 - dayOfWeek
-  // If today is Sunday (0): today is considered active/passed, so next slot is NEXT Sunday (+7 days)
-  const daysToFirstSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
+    const parts = formatter.formatToParts(dateToUse);
+    const partMap = {};
+    for (const p of parts) {
+      if (p.type !== 'literal') {
+        partMap[p.type] = parseInt(p.value, 10);
+      }
+    }
 
-  const firstSunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToFirstSunday);
+    const year = partMap.year;
+    const month = partMap.month - 1; // 0-indexed
+    const day = partMap.day;
+    const hour = partMap.hour % 24;
+    const minute = partMap.minute;
+    const second = partMap.second;
+    const dayOfWeek = new Date(year, month, day).getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
-  // Return exactly ONE single upcoming Sunday slot
-  return [formatSlotDate(firstSunday)];
+    return {
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      dayOfWeek,
+      calendarDate: new Date(year, month, day)
+    };
+  } catch (e) {
+    const now = dateToUse;
+    const dayOfWeek = now.getDay();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      day: now.getDate(),
+      hour: now.getHours(),
+      minute: now.getMinutes(),
+      second: now.getSeconds(),
+      dayOfWeek,
+      calendarDate: new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    };
+  }
+}
+
+// CHANGE 1 — DYNAMIC REGISTRATION SLOT LOGIC
+function getUpcomingSundays(baseDate) {
+  const ist = getISTDateComponents(baseDate);
+
+  if (ist.dayOfWeek === 6) {
+    // Saturday
+    if (ist.hour >= 13) {
+      // CASE 2: Saturday 1:00 PM to 11:59 PM -> Exactly TWO slots (Tomorrow's Sunday and Following Sunday)
+      const tomorrowSunday = new Date(ist.year, ist.month, ist.day + 1);
+      const followingSunday = new Date(ist.year, ist.month, ist.day + 8);
+      return [formatSlotDate(tomorrowSunday), formatSlotDate(followingSunday)];
+    } else {
+      // CASE 1: Saturday before 1:00 PM -> Existing slot behavior (Tomorrow's Sunday)
+      const tomorrowSunday = new Date(ist.year, ist.month, ist.day + 1);
+      return [formatSlotDate(tomorrowSunday)];
+    }
+  } else if (ist.dayOfWeek === 0) {
+    // CASE 3: Sunday 12:00 AM onward -> Immediate Sunday disappears, show ONLY next upcoming Sunday
+    const nextSunday = new Date(ist.year, ist.month, ist.day + 7);
+    return [formatSlotDate(nextSunday)];
+  } else {
+    // Monday (1) through Friday (5) -> Existing slot behavior (Upcoming Sunday of this week)
+    const daysToNextSunday = 7 - ist.dayOfWeek;
+    const nextSunday = new Date(ist.year, ist.month, ist.day + daysToNextSunday);
+    return [formatSlotDate(nextSunday)];
+  }
 }
 
 function populateDynamicSlots() {
@@ -221,7 +274,7 @@ function populateDynamicSlots() {
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.disabled = true;
-  placeholder.selected = !currentVal;
+  placeholder.selected = !currentVal || !slots.includes(currentVal);
   placeholder.textContent = "Select an available slot";
   slotSelect.appendChild(placeholder);
 
@@ -236,40 +289,64 @@ function populateDynamicSlots() {
   });
 }
 
+// CHANGE 2 — DYNAMIC WHATSAPP COMMUNITY SWITCH
+const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/CGuPQbkiMls506Uy4bIlP1";
+const WHATSAPP_COMMUNITY_5 = "https://chat.whatsapp.com/EPkGdY9aiQB3R92UoTCUAQ";
+
+function getActiveWhatsAppCommunityLink(baseDate) {
+  const ist = getISTDateComponents(baseDate);
+  // SUNDAY 12:00 AM ONWARD (dayOfWeek === 0 in IST): Community 5
+  if (ist.dayOfWeek === 0) {
+    return WHATSAPP_COMMUNITY_5;
+  }
+  // SATURDAY / BEFORE SUNDAY 12:00 AM: Community 4
+  return WHATSAPP_COMMUNITY_4;
+}
+
+function updateDynamicWhatsAppCommunityLink() {
+  const activeLink = getActiveWhatsAppCommunityLink();
+  const communityBtns = document.querySelectorAll('.btn-whatsapp-community');
+  communityBtns.forEach(btn => {
+    btn.href = activeLink;
+  });
+}
+
+// Live real-time cutoff checker (if page remains open across cutoff)
+function initRealtimeCutoffChecker() {
+  setInterval(() => {
+    populateDynamicSlots();
+    updateDynamicWhatsAppCommunityLink();
+    updateWebsiteBootcampDates();
+  }, 30000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      populateDynamicSlots();
+      updateDynamicWhatsAppCommunityLink();
+      updateWebsiteBootcampDates();
+    }
+  });
+}
+
+// Attach helpers to window for easy inspection and testing
+if (typeof window !== 'undefined') {
+  window.WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_4;
+  window.WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_5;
+  window.getUpcomingSundays = getUpcomingSundays;
+  window.getActiveWhatsAppCommunityLink = getActiveWhatsAppCommunityLink;
+  window.populateDynamicSlots = populateDynamicSlots;
+  window.updateDynamicWhatsAppCommunityLink = updateDynamicWhatsAppCommunityLink;
+}
+
 // ============================================================================
 // DYNAMIC WEBSITE BOOTCAMP DATE REPLACER (Asia/Kolkata timezone)
 // Calculates the next upcoming Sunday and updates all website content automatically
 // ============================================================================
 function getNextBootcampSundayDate(baseDate) {
-  let today;
-  if (baseDate instanceof Date) {
-    today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-  } else {
-    try {
-      const now = new Date();
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      }).formatToParts(now);
-
-      let y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
-      for (const p of parts) {
-        if (p.type === 'year') y = parseInt(p.value, 10);
-        if (p.type === 'month') m = parseInt(p.value, 10) - 1;
-        if (p.type === 'day') d = parseInt(p.value, 10);
-      }
-      today = new Date(y, m, d);
-    } catch (e) {
-      const now = new Date();
-      today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    }
-  }
-
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const ist = getISTDateComponents(baseDate);
+  const dayOfWeek = ist.dayOfWeek;
   const daysToSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToSunday);
+  return new Date(ist.year, ist.month, ist.day + daysToSunday);
 }
 
 function updateWebsiteBootcampDates() {
@@ -395,8 +472,9 @@ function openRegistrationFormModal() {
   if (exitModal) exitModal.classList.remove('open');
   if (popup2) popup2.classList.remove('open');
 
-  // Refresh dynamic slots on modal open
+  // Refresh dynamic slots & WhatsApp link on modal open
   populateDynamicSlots();
+  updateDynamicWhatsAppCommunityLink();
 
   if (modal) {
     if (stepForm) stepForm.style.display = 'block';
@@ -812,6 +890,7 @@ function showSuccessModal(studentName, passId, slot) {
   registeredStudentState.date = formatPassDateFromSlot(cleanSlot).replace(/\s*·\s*OFFLINE/i, '');
 
   updatePassDisplay(cleanName, cleanId, cleanSlot);
+  updateDynamicWhatsAppCommunityLink();
 
   const modal = document.getElementById('registration-modal');
   const stepForm = document.getElementById('modal-step-form');
@@ -1271,7 +1350,8 @@ function initWhatsAppShare() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
-      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at Nanakramguda, Hyderabad)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: https://chat.whatsapp.com/CGuPQbkiMls506Uy4bIlP1`;
+      const activeCommunity = getActiveWhatsAppCommunityLink();
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at Nanakramguda, Hyderabad)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: ${activeCommunity}`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
