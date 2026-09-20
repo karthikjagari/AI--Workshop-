@@ -234,32 +234,43 @@ function getISTDateComponents(baseDate) {
   }
 }
 
-// CHANGE 1 — DYNAMIC REGISTRATION SLOT LOGIC
+// ============================================================================
+// ROLLING 2-SLOT WINDOW LOGIC (Asia/Kolkata timezone)
+// Always exactly TWO selectable Sunday slots: Sunday A + Sunday B.
+// Rolls forward by one week every Saturday at exactly 1:00 PM IST (13:00).
+// ============================================================================
 function getUpcomingSundays(baseDate) {
   const ist = getISTDateComponents(baseDate);
+  let firstSunday;
+  let secondSunday;
 
   if (ist.dayOfWeek === 6) {
     // Saturday
     if (ist.hour >= 13) {
-      // CASE 2: Saturday 1:00 PM to 11:59 PM -> Exactly TWO slots (Tomorrow's Sunday and Following Sunday)
-      const tomorrowSunday = new Date(ist.year, ist.month, ist.day + 1);
-      const followingSunday = new Date(ist.year, ist.month, ist.day + 8);
-      return [formatSlotDate(tomorrowSunday), formatSlotDate(followingSunday)];
+      // At or after 1:00 PM IST: Tomorrow's Sunday expires from window
+      // Window rolls forward to: Following Sunday + Next Following Sunday
+      firstSunday = new Date(ist.year, ist.month, ist.day + 8);
+      secondSunday = new Date(ist.year, ist.month, ist.day + 15);
     } else {
-      // CASE 1: Saturday before 1:00 PM -> Existing slot behavior (Tomorrow's Sunday)
-      const tomorrowSunday = new Date(ist.year, ist.month, ist.day + 1);
-      return [formatSlotDate(tomorrowSunday)];
+      // Before 1:00 PM IST: Tomorrow's Sunday is still active
+      // Window is: Tomorrow's Sunday + Following Sunday
+      firstSunday = new Date(ist.year, ist.month, ist.day + 1);
+      secondSunday = new Date(ist.year, ist.month, ist.day + 8);
     }
   } else if (ist.dayOfWeek === 0) {
-    // CASE 3: Sunday 12:00 AM onward -> Immediate Sunday disappears, show ONLY next upcoming Sunday
-    const nextSunday = new Date(ist.year, ist.month, ist.day + 7);
-    return [formatSlotDate(nextSunday)];
+    // Sunday: Cutoff already passed on Saturday at 1:00 PM IST
+    // Window is: Next Sunday + Following Sunday
+    firstSunday = new Date(ist.year, ist.month, ist.day + 7);
+    secondSunday = new Date(ist.year, ist.month, ist.day + 14);
   } else {
-    // Monday (1) through Friday (5) -> Existing slot behavior (Upcoming Sunday of this week)
-    const daysToNextSunday = 7 - ist.dayOfWeek;
-    const nextSunday = new Date(ist.year, ist.month, ist.day + daysToNextSunday);
-    return [formatSlotDate(nextSunday)];
+    // Monday (1) through Friday (5): Cutoff for this week has not arrived yet
+    // Window is: Upcoming Sunday of this week + Following Sunday
+    const daysToSunday = 7 - ist.dayOfWeek;
+    firstSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
+    secondSunday = new Date(ist.year, ist.month, ist.day + daysToSunday + 7);
   }
+
+  return [formatSlotDate(firstSunday), formatSlotDate(secondSunday)];
 }
 
 function populateDynamicSlots() {
