@@ -14,6 +14,7 @@ var HEADERS = [
   "Source (utm_source)",
   "Medium (utm_medium)",
   "Campaign (utm_campaign)",
+  "Invite Code",
   "Landing URL",
   "Pass ID"
 ];
@@ -87,7 +88,10 @@ function doPost(e) {
     data.standard = standard;
     data.available_slot = slot;
 
-    // Required fields from the registration form (No state, No district)
+    // Invite Code is OPTIONAL
+    data.invite_code = (data.invite_code || "").toString().trim();
+
+    // Required fields from the registration form
     var required = [
       "name",
       "mobile",
@@ -100,6 +104,7 @@ function doPost(e) {
 
     for (var i = 0; i < required.length; i++) {
       var field = required[i];
+
       if (
         !data[field] ||
         data[field].toString().trim() === ""
@@ -111,10 +116,11 @@ function doPost(e) {
       }
     }
 
-    // Validate and normalize mobile number
+    // Validate and normalize mobile number (10 digits)
     var mobile = data.mobile
       .toString()
       .replace(/\D/g, "");
+
     if (mobile.length === 11 && mobile.indexOf("0") === 0) {
       mobile = mobile.substring(1);
     } else if (mobile.length === 12 && mobile.indexOf("91") === 0) {
@@ -135,7 +141,7 @@ function doPost(e) {
     // Master registration sheet
     var master = getOrCreateSheet(ss, MASTER_TAB);
 
-    // Check if mobile number is already registered
+    // Check if mobile number is already registered in the sheet
     if (isMobileAlreadyRegistered(master, mobile)) {
       return jsonResponse({
         success: false,
@@ -144,7 +150,7 @@ function doPost(e) {
       });
     }
 
-    // Generate unique Bootcamp Pass ID only for new registrations
+    // Generate unique Bootcamp Pass ID ONLY for new registrations
     var passId =
       "BOOTCAMP-" +
       Utilities.getUuid()
@@ -168,6 +174,10 @@ function doPost(e) {
       utm_source: data.utm_source || "direct",
       utm_medium: data.utm_medium || "direct",
       utm_campaign: data.utm_campaign || "none",
+
+      // Invite Code
+      invite_code: data.invite_code || "",
+
       landing_url: data.landing_url || "",
       passId: passId
     };
@@ -185,6 +195,7 @@ function doPost(e) {
       ss,
       channel
     );
+
     var channelRow = buildRowForSheet(channelSheet, rowRecord);
     channelSheet.appendRow(channelRow);
 
@@ -202,46 +213,121 @@ function doPost(e) {
   }
 }
 
+function isMobileAlreadyRegistered(sheet, targetMobile) {
+  try {
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return false;
+
+    var lastCol = sheet.getLastColumn();
+    if (lastCol === 0) return false;
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var mobileCol = -1;
+
+    for (var i = 0; i < headers.length; i++) {
+      var h = headers[i].toString().toLowerCase();
+
+      if (h.indexOf("mobile") !== -1 || h.indexOf("phone") !== -1) {
+        mobileCol = i + 1;
+        break;
+      }
+    }
+
+    if (mobileCol === -1) mobileCol = 3;
+
+    var mobileValues = sheet.getRange(2, mobileCol, lastRow - 1, 1).getValues();
+
+    var cleanTarget = targetMobile.toString().replace(/\D/g, "");
+
+    if (cleanTarget.length > 10) {
+      cleanTarget = cleanTarget.slice(-10);
+    }
+
+    for (var r = 0; r < mobileValues.length; r++) {
+      var cell = mobileValues[r][0];
+
+      if (cell !== undefined && cell !== null && cell !== "") {
+        var cleanCell = cell.toString().replace(/\D/g, "");
+
+        if (cleanCell.length > 10) {
+          cleanCell = cleanCell.slice(-10);
+        }
+
+        if (cleanCell === cleanTarget && cleanTarget.length === 10) {
+          return true;
+        }
+      }
+    }
+
+  } catch (err) {
+    Logger.log("Error checking duplicate mobile: " + err.message);
+  }
+
+  return false;
+}
+
 function buildRowForSheet(sheet, record) {
   var lastCol = sheet.getLastColumn();
+
   if (lastCol === 0) return [];
+
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   var row = new Array(headers.length);
 
   for (var i = 0; i < headers.length; i++) {
     var h = headers[i].toString().toLowerCase().trim();
+
     if (h.indexOf("timestamp") !== -1 || h.indexOf("time") !== -1) {
       row[i] = record.timestamp;
+
     } else if (h.indexOf("pass") !== -1 || h.indexOf("bootcamp id") !== -1) {
       row[i] = record.passId;
+
     } else if (h.indexOf("mobile") !== -1 || h.indexOf("phone") !== -1) {
       row[i] = record.mobile;
+
     } else if (h.indexOf("location") !== -1 || h.indexOf("place") !== -1) {
       row[i] = record.college_location || record.location;
+
     } else if (h.indexOf("address") !== -1) {
       row[i] = record.address || record.college_location || record.location;
+
     } else if (h.indexOf("stream") !== -1 || h.indexOf("branch") !== -1) {
       row[i] = record.educational_stream || record.stream;
+
     } else if (h.indexOf("standard") !== -1 || h.indexOf("class") !== -1 || h.indexOf("grade") !== -1) {
       row[i] = record.standard;
+
     } else if (h.indexOf("college") !== -1 || h.indexOf("school") !== -1) {
       row[i] = record.college;
+
     } else if (h.indexOf("slot") !== -1) {
       row[i] = record.available_slot || record.slot;
+
     } else if (h.indexOf("source") !== -1) {
       row[i] = record.utm_source;
+
     } else if (h.indexOf("medium") !== -1) {
       row[i] = record.utm_medium;
+
     } else if (h.indexOf("campaign") !== -1) {
       row[i] = record.utm_campaign;
+
+    // Robust Invite Code matching: matches "Invite Code", "invite_code", "Invite", etc.
+    } else if (h.indexOf("invite") !== -1) {
+      row[i] = record.invite_code || "";
+
     } else if (h.indexOf("url") !== -1 || h.indexOf("landing") !== -1) {
       row[i] = record.landing_url;
+
     } else if (h.indexOf("name") !== -1) {
       row[i] = record.name;
+
     } else {
       row[i] = "";
     }
   }
+
   return row;
 }
 
@@ -262,65 +348,152 @@ function getOrCreateSheet(ss, name) {
   }
 
   ensureSheetHeaders(sheet);
+
   return sheet;
 }
 
 function ensureSheetHeaders(sheet) {
   var lastCol = sheet.getLastColumn();
+
   if (lastCol === 0) return;
 
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
   function findIndex(term) {
     for (var i = 0; i < headers.length; i++) {
-      if (headers[i].toString().toLowerCase().indexOf(term) !== -1) return i;
+      if (
+        headers[i]
+          .toString()
+          .toLowerCase()
+          .indexOf(term) !== -1
+      ) {
+        return i;
+      }
     }
+
     return -1;
   }
 
   // 1. Ensure "School/College Location" column exists after College Name
   var locIdx = findIndex("location");
+
   if (locIdx === -1) {
     var collegeIdx = findIndex("college");
-    if (collegeIdx === -1) collegeIdx = findIndex("school");
+
+    if (collegeIdx === -1) {
+      collegeIdx = findIndex("school");
+    }
+
     if (collegeIdx !== -1) {
       sheet.insertColumnAfter(collegeIdx + 1);
-      sheet.getRange(1, collegeIdx + 2).setValue("School/College Location").setFontWeight("bold");
+
+      sheet
+        .getRange(1, collegeIdx + 2)
+        .setValue("School/College Location")
+        .setFontWeight("bold");
+
     } else {
       sheet.insertColumnAfter(4);
-      sheet.getRange(1, 5).setValue("School/College Location").setFontWeight("bold");
+
+      sheet
+        .getRange(1, 5)
+        .setValue("School/College Location")
+        .setFontWeight("bold");
     }
+
     lastCol = sheet.getLastColumn();
-    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    headers = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0];
   }
 
   // 2. Ensure "Educational Stream" column exists after Standard
   var streamIdx = findIndex("stream");
+
   if (streamIdx === -1) {
     var standardIdx = findIndex("standard");
+
     if (standardIdx !== -1) {
       sheet.insertColumnAfter(standardIdx + 1);
-      sheet.getRange(1, standardIdx + 2).setValue("Educational Stream").setFontWeight("bold");
+
+      sheet
+        .getRange(1, standardIdx + 2)
+        .setValue("Educational Stream")
+        .setFontWeight("bold");
+
     } else {
       sheet.insertColumnAfter(6);
-      sheet.getRange(1, 7).setValue("Educational Stream").setFontWeight("bold");
+
+      sheet
+        .getRange(1, 7)
+        .setValue("Educational Stream")
+        .setFontWeight("bold");
     }
+
     lastCol = sheet.getLastColumn();
-    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    headers = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0];
   }
 
   // 3. Ensure "Available Slot" column exists
   var slotIdx = findIndex("slot");
+
   if (slotIdx === -1) {
     var streamColIdx = findIndex("stream");
+
     if (streamColIdx !== -1) {
       sheet.insertColumnAfter(streamColIdx + 1);
-      sheet.getRange(1, streamColIdx + 2).setValue("Available Slot").setFontWeight("bold");
+
+      sheet
+        .getRange(1, streamColIdx + 2)
+        .setValue("Available Slot")
+        .setFontWeight("bold");
+
     } else {
       sheet.insertColumnAfter(7);
-      sheet.getRange(1, 8).setValue("Available Slot").setFontWeight("bold");
+
+      sheet
+        .getRange(1, 8)
+        .setValue("Available Slot")
+        .setFontWeight("bold");
+    }
+
+    lastCol = sheet.getLastColumn();
+
+    headers = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0];
+  }
+
+  // 4. Ensure "Invite Code" exists immediately after Campaign
+  var inviteIdx = findIndex("invite");
+
+  if (inviteIdx === -1) {
+    var campaignIdx = findIndex("campaign");
+
+    if (campaignIdx !== -1) {
+      sheet.insertColumnAfter(campaignIdx + 1);
+
+      sheet
+        .getRange(1, campaignIdx + 2)
+        .setValue("Invite Code")
+        .setFontWeight("bold");
+
+    } else {
+      sheet.insertColumnAfter(11);
+
+      sheet
+        .getRange(1, 12)
+        .setValue("Invite Code")
+        .setFontWeight("bold");
     }
   }
+
+  // Flush to ensure structure is synchronized immediately
+  SpreadsheetApp.flush();
 }
 
 function normalizeChannelName(raw) {
@@ -329,7 +502,7 @@ function normalizeChannelName(raw) {
     .toLowerCase()
     .trim();
 
-  // Automatically route any CBA campaign (cba-pasha, cba_call, cba-xyz, etc.) to the main CBA tab
+  // Automatically route any CBA campaign (cba, cba_call, cba-pasha, etc.) to the main CBA tab
   if (key === "cba" || key.indexOf("cba") === 0) {
     return "CBA";
   }
@@ -337,8 +510,8 @@ function normalizeChannelName(raw) {
   var map = {
     "im": "IM",
     "dm": "DM",
-    "cba": "CBA",
     "cba_call": "CBA",
+    "cba": "CBA",
     "cba-pasha": "CBA",
     "whatsapp": "WhatsApp",
     "instagram": "Instagram",
@@ -363,45 +536,3 @@ function jsonResponse(obj) {
       ContentService.MimeType.JSON
     );
 }
-
-function isMobileAlreadyRegistered(sheet, targetMobile) {
-  try {
-    var lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return false;
-
-    var lastCol = sheet.getLastColumn();
-    if (lastCol === 0) return false;
-
-    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    var mobileCol = -1;
-
-    for (var i = 0; i < headers.length; i++) {
-      var h = headers[i].toString().toLowerCase();
-      if (h.indexOf("mobile") !== -1 || h.indexOf("phone") !== -1) {
-        mobileCol = i + 1;
-        break;
-      }
-    }
-
-    if (mobileCol === -1) mobileCol = 3;
-
-    var mobileValues = sheet.getRange(2, mobileCol, lastRow - 1, 1).getValues();
-    var cleanTarget = targetMobile.toString().replace(/\D/g, "");
-    if (cleanTarget.length > 10) cleanTarget = cleanTarget.slice(-10);
-
-    for (var r = 0; r < mobileValues.length; r++) {
-      var cell = mobileValues[r][0];
-      if (cell !== undefined && cell !== null && cell !== "") {
-        var cleanCell = cell.toString().replace(/\D/g, "");
-        if (cleanCell.length > 10) cleanCell = cleanCell.slice(-10);
-        if (cleanCell === cleanTarget && cleanTarget.length === 10) {
-          return true;
-        }
-      }
-    }
-  } catch (err) {
-    Logger.log("Error checking duplicate mobile: " + err.message);
-  }
-  return false;
-}
-
