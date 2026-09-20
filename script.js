@@ -458,6 +458,9 @@ function populateHiddenFields() {
   if (termEl) termEl.value = getParam("utm_term", "");
   if (contentEl) contentEl.value = getParam("utm_content", "");
   if (urlEl) urlEl.value = window.location.href;
+
+  // Cache invite_code if present in URL
+  getParam("invite_code", "");
 }
 
 // Opens the Native Embedded Registration Form Modal
@@ -731,6 +734,9 @@ function initRegistrationModal() {
         return;
       }
 
+      const params = new URLSearchParams(window.location.search);
+      const inviteCode = params.get("invite_code") || getParam("invite_code", "") || "";
+
       const payload = {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
@@ -746,6 +752,7 @@ function initRegistrationModal() {
         utm_source: (document.getElementById("reg_utm_source") || {}).value || "",
         utm_medium: (document.getElementById("reg_utm_medium") || {}).value || "",
         utm_campaign: (document.getElementById("reg_utm_campaign") || {}).value || "",
+        invite_code: inviteCode,
         landing_url: (document.getElementById("reg_landing_url") || {}).value || window.location.href,
         submitted_at: new Date().toISOString()
       };
