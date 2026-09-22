@@ -285,18 +285,12 @@ function populateDynamicSlots() {
   });
 }
 
-// CHANGE 2 — DYNAMIC WHATSAPP COMMUNITY SWITCH
-const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/CGuPQbkiMls506Uy4bIlP1";
+// CHANGE 2 — WHATSAPP COMMUNITY LINK (Community 5)
+const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/EPkGdY9aiQB3R92UoTCUAQ";
 const WHATSAPP_COMMUNITY_5 = "https://chat.whatsapp.com/EPkGdY9aiQB3R92UoTCUAQ";
 
 function getActiveWhatsAppCommunityLink(baseDate) {
-  const ist = getISTDateComponents(baseDate);
-  // SUNDAY 12:00 AM ONWARD (dayOfWeek === 0 in IST): Community 5
-  if (ist.dayOfWeek === 0) {
-    return WHATSAPP_COMMUNITY_5;
-  }
-  // SATURDAY / BEFORE SUNDAY 12:00 AM: Community 4
-  return WHATSAPP_COMMUNITY_4;
+  return WHATSAPP_COMMUNITY_5;
 }
 
 function updateDynamicWhatsAppCommunityLink() {
