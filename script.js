@@ -235,42 +235,27 @@ function getISTDateComponents(baseDate) {
 }
 
 // ============================================================================
-// ROLLING 2-SLOT WINDOW LOGIC (Asia/Kolkata timezone)
-// Always exactly TWO selectable Sunday slots: Sunday A + Sunday B.
-// Rolls forward by one week every Saturday at exactly 1:00 PM IST (13:00).
+// DYNAMIC REGISTRATION AVAILABLE SLOTS LOGIC (Asia/Kolkata timezone)
+// Manager feedback: No bootcamp on 27th September, 2026.
+// For this week, 27th September is removed and only 4th October slot is available.
 // ============================================================================
 function getUpcomingSundays(baseDate) {
   const ist = getISTDateComponents(baseDate);
-  let firstSunday;
-  let secondSunday;
 
-  if (ist.dayOfWeek === 6) {
-    // Saturday
-    if (ist.hour >= 13) {
-      // At or after 1:00 PM IST: Tomorrow's Sunday expires from window
-      // Window rolls forward to: Following Sunday + Next Following Sunday
-      firstSunday = new Date(ist.year, ist.month, ist.day + 8);
-      secondSunday = new Date(ist.year, ist.month, ist.day + 15);
-    } else {
-      // Before 1:00 PM IST: Tomorrow's Sunday is still active
-      // Window is: Tomorrow's Sunday + Following Sunday
-      firstSunday = new Date(ist.year, ist.month, ist.day + 1);
-      secondSunday = new Date(ist.year, ist.month, ist.day + 8);
-    }
-  } else if (ist.dayOfWeek === 0) {
-    // Sunday: Cutoff already passed on Saturday at 1:00 PM IST
-    // Window is: Next Sunday + Following Sunday
-    firstSunday = new Date(ist.year, ist.month, ist.day + 7);
-    secondSunday = new Date(ist.year, ist.month, ist.day + 14);
-  } else {
-    // Monday (1) through Friday (5): Cutoff for this week has not arrived yet
-    // Window is: Upcoming Sunday of this week + Following Sunday
-    const daysToSunday = 7 - ist.dayOfWeek;
-    firstSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
-    secondSunday = new Date(ist.year, ist.month, ist.day + daysToSunday + 7);
+  // For this week leading up to or on Sep 27, 2026:
+  // 27th September is removed, keeping only 1 slot: Sunday, 4th October, 2026
+  const isSep27Week = (ist.year === 2026 && ist.month === 8) ||
+                      (ist.year === 2026 && ist.month === 9 && ist.day <= 3 && (ist.day < 3 || ist.hour < 13));
+
+  if (isSep27Week) {
+    const oct4Date = new Date(2026, 9, 4); // Sunday, 4th October, 2026
+    return [formatSlotDate(oct4Date)];
   }
 
-  return [formatSlotDate(firstSunday), formatSlotDate(secondSunday)];
+  // Next upcoming Sunday
+  const daysToSunday = ist.dayOfWeek === 0 ? 7 : (7 - ist.dayOfWeek);
+  const nextSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
+  return [formatSlotDate(nextSunday)];
 }
 
 function populateDynamicSlots() {
@@ -357,7 +342,12 @@ function getNextBootcampSundayDate(baseDate) {
   const ist = getISTDateComponents(baseDate);
   const dayOfWeek = ist.dayOfWeek;
   const daysToSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
-  return new Date(ist.year, ist.month, ist.day + daysToSunday);
+  const nextSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
+  // Manager feedback: No bootcamp on 27th September, 2026 -> next bootcamp is 4th October, 2026
+  if (nextSunday.getFullYear() === 2026 && nextSunday.getMonth() === 8 && nextSunday.getDate() === 27) {
+    return new Date(ist.year, ist.month, ist.day + daysToSunday + 7);
+  }
+  return nextSunday;
 }
 
 function updateWebsiteBootcampDates() {
