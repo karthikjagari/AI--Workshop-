@@ -285,12 +285,13 @@ function populateDynamicSlots() {
   });
 }
 
-// CHANGE 2 — WHATSAPP COMMUNITY LINK (Community 5)
-const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/EPkGdY9aiQB3R92UoTCUAQ";
-const WHATSAPP_COMMUNITY_5 = "https://chat.whatsapp.com/EPkGdY9aiQB3R92UoTCUAQ";
+// CHANGE 2 — WHATSAPP COMMUNITY LINK (Community 6)
+const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
+const WHATSAPP_COMMUNITY_5 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
+const WHATSAPP_COMMUNITY_6 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
 
 function getActiveWhatsAppCommunityLink(baseDate) {
-  return WHATSAPP_COMMUNITY_5;
+  return WHATSAPP_COMMUNITY_6;
 }
 
 function updateDynamicWhatsAppCommunityLink() {
@@ -322,6 +323,7 @@ function initRealtimeCutoffChecker() {
 if (typeof window !== 'undefined') {
   window.WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_4;
   window.WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_5;
+  window.WHATSAPP_COMMUNITY_6 = WHATSAPP_COMMUNITY_6;
   window.getUpcomingSundays = getUpcomingSundays;
   window.getActiveWhatsAppCommunityLink = getActiveWhatsAppCommunityLink;
   window.populateDynamicSlots = populateDynamicSlots;
