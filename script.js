@@ -235,27 +235,37 @@ function getISTDateComponents(baseDate) {
 }
 
 // ============================================================================
-// DYNAMIC REGISTRATION AVAILABLE SLOTS LOGIC (Asia/Kolkata timezone)
-// Manager feedback: No bootcamp on 27th September, 2026.
-// For this week, 27th September is removed and only 4th October slot is available.
+// DYNAMIC BI-WEEKLY (EVERY 2 WEEKS) BOOTCAMP SLOTS LOGIC (Asia/Kolkata timezone)
+// Bootcamp schedule: Every 2 weeks (every 14 days) on Sunday.
+// Active anchor: Sunday, 18th October, 2026 (11th October is skipped).
+// Rollover: Automatically advances to next 2-week slot on Saturday night (23:59:59 IST).
+// Shows exactly ONE slot in the dropdown.
 // ============================================================================
-function getUpcomingSundays(baseDate) {
+function getNextBiweeklyBootcampDate(baseDate) {
   const ist = getISTDateComponents(baseDate);
+  const currentISTTime = new Date(ist.year, ist.month, ist.day, ist.hour, ist.minute, ist.second).getTime();
 
-  // For this week leading up to or on Sep 27, 2026:
-  // 27th September is removed, keeping only 1 slot: Sunday, 4th October, 2026
-  const isSep27Week = (ist.year === 2026 && ist.month === 8) ||
-                      (ist.year === 2026 && ist.month === 9 && ist.day <= 3 && (ist.day < 3 || ist.hour < 13));
+  // Anchor bootcamp: Sunday, 18 October 2026 (00:00:00 IST)
+  // Each cycle is 14 days (2 weeks).
+  // Cutoff for cycle i is Saturday 23:59:59.999 IST preceding the bootcamp Sunday.
+  const anchorYear = 2026;
+  const anchorMonth = 9; // October (0-indexed)
+  const anchorDay = 18;
 
-  if (isSep27Week) {
-    const oct4Date = new Date(2026, 9, 4); // Sunday, 4th October, 2026
-    return [formatSlotDate(oct4Date)];
+  let i = 0;
+  while (true) {
+    const cutoffTime = new Date(anchorYear, anchorMonth, anchorDay + (i * 14) - 1, 23, 59, 59, 999).getTime();
+    if (currentISTTime <= cutoffTime) {
+      return new Date(anchorYear, anchorMonth, anchorDay + (i * 14));
+    }
+    i++;
+    if (i > 1000) return new Date(anchorYear, anchorMonth, anchorDay + (i * 14));
   }
+}
 
-  // Next upcoming Sunday
-  const daysToSunday = ist.dayOfWeek === 0 ? 7 : (7 - ist.dayOfWeek);
-  const nextSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
-  return [formatSlotDate(nextSunday)];
+function getUpcomingSundays(baseDate) {
+  const nextBootcamp = getNextBiweeklyBootcampDate(baseDate);
+  return [formatSlotDate(nextBootcamp)];
 }
 
 function populateDynamicSlots() {
@@ -324,6 +334,7 @@ if (typeof window !== 'undefined') {
   window.WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_4;
   window.WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_5;
   window.WHATSAPP_COMMUNITY_6 = WHATSAPP_COMMUNITY_6;
+  window.getNextBiweeklyBootcampDate = getNextBiweeklyBootcampDate;
   window.getUpcomingSundays = getUpcomingSundays;
   window.getActiveWhatsAppCommunityLink = getActiveWhatsAppCommunityLink;
   window.populateDynamicSlots = populateDynamicSlots;
@@ -332,18 +343,10 @@ if (typeof window !== 'undefined') {
 
 // ============================================================================
 // DYNAMIC WEBSITE BOOTCAMP DATE REPLACER (Asia/Kolkata timezone)
-// Calculates the next upcoming Sunday and updates all website content automatically
+// Calculates the next upcoming bi-weekly Sunday and updates all website content automatically
 // ============================================================================
 function getNextBootcampSundayDate(baseDate) {
-  const ist = getISTDateComponents(baseDate);
-  const dayOfWeek = ist.dayOfWeek;
-  const daysToSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek);
-  const nextSunday = new Date(ist.year, ist.month, ist.day + daysToSunday);
-  // Manager feedback: No bootcamp on 27th September, 2026 -> next bootcamp is 4th October, 2026
-  if (nextSunday.getFullYear() === 2026 && nextSunday.getMonth() === 8 && nextSunday.getDate() === 27) {
-    return new Date(ist.year, ist.month, ist.day + daysToSunday + 7);
-  }
-  return nextSunday;
+  return getNextBiweeklyBootcampDate(baseDate);
 }
 
 function updateWebsiteBootcampDates() {
