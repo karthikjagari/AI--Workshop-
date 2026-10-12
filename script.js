@@ -363,81 +363,19 @@ function getNextBootcampSundayDate(baseDate) {
 
 function updateWebsiteBootcampDates() {
   const nextSunday = getNextBootcampSundayDate();
-  const dayNum = nextSunday.getDate();
-  const monthFull = MONTH_NAMES_FULL[nextSunday.getMonth()];
-  const monthShort = monthFull.substring(0, 3);
-  const year = nextSunday.getFullYear();
+  const formatMobileSticky = "Offline · Pan-India · Limited Seats";
 
-  const formatUppercase = `${dayNum} ${monthFull.toUpperCase()} ${year}`;
-  const formatNormal = `${dayNum} ${monthFull} ${year}`;
-  const formatSundayFull = `Sunday, ${dayNum} ${monthFull} ${year}`;
-  const formatShort = `${dayNum} ${monthShort} ${year}`;
-  const formatMobileSticky = `${dayNum} ${monthShort} · Pan-India Centres · Online`;
-
-  // 1. Hero Spec Badge
-  const heroSpecBadge = document.querySelector('.hero-event-specs .spec-item .spec-text');
-  if (heroSpecBadge && (heroSpecBadge.textContent.includes('AUGUST') || heroSpecBadge.textContent.includes('SEPTEMBER') || /\d{1,2}\s+[A-Z]+\s+\d{4}/.test(heroSpecBadge.textContent))) {
-    heroSpecBadge.textContent = formatUppercase;
-  }
-
-  // 2. Marquee Ticker
-  document.querySelectorAll('.marquee-item').forEach(el => {
-    if (el.textContent.includes('📅') && el.textContent.includes('(SUNDAY)')) {
-      const dot = el.querySelector('.marquee-dot');
-      el.innerHTML = `📅 ${formatUppercase} (SUNDAY) `;
-      if (dot) el.appendChild(dot);
-      else {
-        const newDot = document.createElement('span');
-        newDot.className = 'marquee-dot';
-        newDot.textContent = '●';
-        el.appendChild(newDot);
-      }
-    }
-  });
-
-  // 3. Event Details Grid Card: Date
-  document.querySelectorAll('.detail-card').forEach(card => {
-    const label = card.querySelector('.detail-card-label');
-    const val = card.querySelector('.detail-card-value');
-    if (label && label.textContent.includes('DATE') && val) {
-      val.textContent = formatNormal;
-    }
-  });
-
-  // 4. FAQ Section Venue & Timing Answer
-  document.querySelectorAll('.faq-item, .faq-answer-content').forEach(faq => {
-    if (faq.innerHTML.includes('offline learning centres') || faq.innerHTML.includes('Sri Sai Nagar')) {
-      faq.innerHTML = faq.innerHTML.replace(
-        /Sunday,\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}/gi,
-        formatSundayFull
-      ).replace(
-        /\d{1,2}\s+September\s+2026/gi,
-        formatNormal
-      ).replace(
-        /\d{1,2}\s+August\s+2026/gi,
-        formatNormal
-      );
-    }
-  });
-
-  // 5. Closing Experience CTA Info Pill Bar
-  document.querySelectorAll('.exp-info-pill-item').forEach(el => {
-    if (el.textContent.includes('📅') && (el.textContent.includes('Aug') || el.textContent.includes('Sep') || /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/.test(el.textContent))) {
-      el.innerHTML = `<span>📅</span> ${formatShort}`;
-    }
-  });
-
-  // 6. Mobile Sticky Footer Subtext
+  // Mobile Sticky Footer Subtext
   const mobileStickySub = document.querySelector('.mobile-sticky-sub');
   if (mobileStickySub) {
     mobileStickySub.textContent = formatMobileSticky;
   }
 
-  // 7. Initial Entry Pass Date Display if not registered yet
+  // Initial Entry Pass Date Display placeholder if not registered yet
   if (!registeredStudentState.slot && !registeredStudentState.name) {
     const initialPassDates = document.querySelectorAll('.dynamic-pass-date, .pass-date-val');
     initialPassDates.forEach(el => {
-      el.textContent = `${formatUppercase} · OFFLINE`;
+      el.textContent = 'OFFLINE ENTRY PASS';
     });
   }
 }
