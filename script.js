@@ -683,9 +683,12 @@ function initRegistrationModal() {
     }
   });
 
-  // Wire up all CTA buttons across the page to open the native registration form modal
-  document.querySelectorAll('.open-reg-modal, a[href*="docs.google.com/forms"]').forEach(cta => {
+  // Wire up all CTA buttons across the page to open the native registration form modal (excluding Query Form)
+  document.querySelectorAll('.open-reg-modal, a[href*="docs.google.com/forms"]:not(.btn-query-form)').forEach(cta => {
     cta.addEventListener('click', (e) => {
+      if (cta.classList.contains('btn-query-form') || cta.closest('.footer-reach-col')) {
+        return; // Allow Query Form to open directly
+      }
       e.preventDefault();
       openRegistrationFormModal();
     });
