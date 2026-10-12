@@ -130,7 +130,7 @@ const registeredStudentState = {
   city: 'Hyderabad',
   passId: '',
   date: '',
-  venue: 'Sri Sai Nagar, Madhapur, Hyderabad'
+  venue: 'Offline Learning Centres (Pan-India)'
 };
 
 // ============================================================================
@@ -269,29 +269,39 @@ function getUpcomingSundays(baseDate) {
 }
 
 function populateDynamicSlots() {
-  const slotSelect = document.getElementById("reg_slot");
-  if (!slotSelect) return;
-
-  const currentVal = slotSelect.value;
+  const slotElements = [
+    document.getElementById("reg_slot_select"),
+    document.getElementById("reg_slot")
+  ];
   const slots = getUpcomingSundays();
 
-  slotSelect.innerHTML = "";
+  slotElements.forEach(slotSelect => {
+    if (!slotSelect) return;
+    if (slotSelect.tagName && slotSelect.tagName.toLowerCase() === 'select') {
+      const currentVal = slotSelect.value;
+      slotSelect.innerHTML = "";
 
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.disabled = true;
-  placeholder.selected = !currentVal || !slots.includes(currentVal);
-  placeholder.textContent = "Select an available slot";
-  slotSelect.appendChild(placeholder);
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.disabled = true;
+      placeholder.selected = !currentVal || !slots.includes(currentVal);
+      placeholder.textContent = "Select an available slot";
+      slotSelect.appendChild(placeholder);
 
-  slots.forEach(slotText => {
-    const opt = document.createElement("option");
-    opt.value = slotText;
-    opt.textContent = slotText;
-    if (currentVal === slotText) {
-      opt.selected = true;
+      slots.forEach(slotText => {
+        const opt = document.createElement("option");
+        opt.value = slotText;
+        opt.textContent = slotText;
+        if (currentVal === slotText) {
+          opt.selected = true;
+        }
+        slotSelect.appendChild(opt);
+      });
+    } else if (slotSelect.tagName && slotSelect.tagName.toLowerCase() === 'input') {
+      if (!slotSelect.value && slots.length > 0) {
+        slotSelect.value = slots[0];
+      }
     }
-    slotSelect.appendChild(opt);
   });
 }
 
@@ -339,6 +349,8 @@ if (typeof window !== 'undefined') {
   window.getActiveWhatsAppCommunityLink = getActiveWhatsAppCommunityLink;
   window.populateDynamicSlots = populateDynamicSlots;
   window.updateDynamicWhatsAppCommunityLink = updateDynamicWhatsAppCommunityLink;
+  window.initRegistrationModal = initRegistrationModal;
+  window.openRegistrationFormModal = openRegistrationFormModal;
 }
 
 // ============================================================================
@@ -360,7 +372,7 @@ function updateWebsiteBootcampDates() {
   const formatNormal = `${dayNum} ${monthFull} ${year}`;
   const formatSundayFull = `Sunday, ${dayNum} ${monthFull} ${year}`;
   const formatShort = `${dayNum} ${monthShort} ${year}`;
-  const formatMobileSticky = `${dayNum} ${monthShort} · Sri Sai Nagar, Madhapur, Hyderabad`;
+  const formatMobileSticky = `${dayNum} ${monthShort} · Pan-India Centres · Online`;
 
   // 1. Hero Spec Badge
   const heroSpecBadge = document.querySelector('.hero-event-specs .spec-item .spec-text');
@@ -394,10 +406,13 @@ function updateWebsiteBootcampDates() {
 
   // 4. FAQ Section Venue & Timing Answer
   document.querySelectorAll('.faq-item, .faq-answer-content').forEach(faq => {
-    if (faq.innerHTML.includes('Sri Sai Nagar, Madhapur, Hyderabad')) {
+    if (faq.innerHTML.includes('offline learning centres') || faq.innerHTML.includes('Sri Sai Nagar')) {
       faq.innerHTML = faq.innerHTML.replace(
         /Sunday,\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}/gi,
         formatSundayFull
+      ).replace(
+        /\d{1,2}\s+September\s+2026/gi,
+        formatNormal
       ).replace(
         /\d{1,2}\s+August\s+2026/gi,
         formatNormal
@@ -471,6 +486,12 @@ function openRegistrationFormModal() {
   const exitModal = document.getElementById('exit-popup-modal');
   const popup2 = document.getElementById('mobile-popup-2');
 
+  const selectFlow = document.getElementById('modal-select-flow');
+  const detailsFlow = document.getElementById('modal-details-flow');
+  const citySelect = document.getElementById('reg_bootcamp_city');
+  const hiddenCityInput = document.getElementById('reg_selected_city');
+  const hiddenSlotInput = document.getElementById('reg_slot');
+
   // Close any popups currently open
   if (exitModal) exitModal.classList.remove('open');
   if (popup2) popup2.classList.remove('open');
@@ -482,12 +503,21 @@ function openRegistrationFormModal() {
   if (modal) {
     if (stepForm) stepForm.style.display = 'block';
     if (stepSuccess) stepSuccess.style.display = 'none';
+
+    // If city and slot are not selected yet, show step 1 (Location -> Slot)
+    if (!hiddenCityInput || !hiddenCityInput.value || !hiddenSlotInput || !hiddenSlotInput.value) {
+      if (selectFlow) selectFlow.style.display = 'block';
+      if (detailsFlow) detailsFlow.style.display = 'none';
+      if (citySelect) setTimeout(() => citySelect.focus(), 150);
+    } else {
+      if (selectFlow) selectFlow.style.display = 'none';
+      if (detailsFlow) detailsFlow.style.display = 'block';
+      const firstInput = document.getElementById('reg_name');
+      if (firstInput) setTimeout(() => firstInput.focus(), 150);
+    }
+
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
-
-    // Auto-focus first input field for convenience
-    const firstInput = document.getElementById('reg_name');
-    if (firstInput) setTimeout(() => firstInput.focus(), 150);
   }
 }
 
@@ -613,6 +643,79 @@ function initRegistrationModal() {
   const btn = document.getElementById("regSubmitBtn");
   const errorBox = document.getElementById("regFormError");
 
+  // Progressive Location & Slot Selection Elements
+  const citySelect = document.getElementById("reg_bootcamp_city");
+  const slotFlowWrapper = document.getElementById("reg_slot_flow_wrapper");
+  const slotSelect = document.getElementById("reg_slot_select");
+  const hiddenCityInput = document.getElementById("reg_selected_city");
+  const hiddenSlotInput = document.getElementById("reg_slot");
+  const selectFlow = document.getElementById("modal-select-flow");
+  const detailsFlow = document.getElementById("modal-details-flow");
+  const summaryCity = document.getElementById("summary-chosen-city");
+  const summarySlot = document.getElementById("summary-chosen-slot");
+  const btnChangeHub = document.getElementById("btn-change-hub");
+
+  function switchToSelectFlow() {
+    if (selectFlow) selectFlow.style.display = 'block';
+    if (detailsFlow) detailsFlow.style.display = 'none';
+    if (citySelect) {
+      if (citySelect.value) {
+        if (slotFlowWrapper) slotFlowWrapper.style.display = 'block';
+      } else {
+        if (slotFlowWrapper) slotFlowWrapper.style.display = 'none';
+      }
+    }
+  }
+
+  // Location Dropdown selection handler
+  if (citySelect) {
+    citySelect.addEventListener("change", function () {
+      const chosenCity = citySelect.value;
+      if (chosenCity) {
+        if (slotFlowWrapper) slotFlowWrapper.style.display = 'block';
+        populateDynamicSlots();
+        if (slotSelect) {
+          slotSelect.value = "";
+          slotSelect.focus();
+        }
+      } else {
+        if (slotFlowWrapper) slotFlowWrapper.style.display = 'none';
+      }
+    });
+  }
+
+  // Slot Dropdown selection handler: Automatically advances to details form with NO Next button
+  if (slotSelect) {
+    slotSelect.addEventListener("change", function () {
+      const chosenSlot = slotSelect.value;
+      const chosenCity = citySelect ? citySelect.value : "Hyderabad";
+      if (chosenSlot && chosenCity) {
+        if (hiddenCityInput) hiddenCityInput.value = chosenCity;
+        if (hiddenSlotInput) hiddenSlotInput.value = chosenSlot;
+        if (summaryCity) summaryCity.textContent = "📍 " + chosenCity + " Centre";
+        if (summarySlot) summarySlot.textContent = "📅 " + chosenSlot;
+        registeredStudentState.city = chosenCity;
+        registeredStudentState.slot = chosenSlot;
+
+        // Auto-advance seamlessly without next button
+        if (selectFlow) selectFlow.style.display = 'none';
+        if (detailsFlow) detailsFlow.style.display = 'block';
+
+        const nameInput = document.getElementById("reg_name");
+        if (nameInput) setTimeout(() => nameInput.focus(), 120);
+      }
+    });
+  }
+
+  // Allow student to change location or slot easily
+  if (btnChangeHub) {
+    btnChangeHub.addEventListener("click", function (e) {
+      e.preventDefault();
+      switchToSelectFlow();
+      if (citySelect) citySelect.focus();
+    });
+  }
+
   // Populate dynamic upcoming Sunday slots
   populateDynamicSlots();
 
@@ -706,15 +809,32 @@ function initRegistrationModal() {
         return;
       }
 
+      const hiddenCity = document.getElementById("reg_selected_city");
+      const citySelectEl = document.getElementById("reg_bootcamp_city");
+      const cityVal = (hiddenCity && hiddenCity.value.trim()) || 
+                      (citySelectEl && citySelectEl.value.trim()) || "Hyderabad";
+
       const nameInput = document.getElementById("reg_name");
       const collegeInput = document.getElementById("reg_college");
       const locationInput = document.getElementById("reg_location");
       const standardRadio = form.querySelector('input[name="standard"]:checked');
       const streamSelect = document.getElementById("reg_stream");
-      const slotSelect = document.getElementById("reg_slot");
-      const slotVal = slotSelect ? slotSelect.value.trim() : "";
+      const hiddenSlotEl = document.getElementById("reg_slot");
+      const slotSelectEl = document.getElementById("reg_slot_select");
+      const slotVal = (hiddenSlotEl && hiddenSlotEl.value.trim()) || 
+                      (slotSelectEl && slotSelectEl.value.trim()) || "";
       const locationVal = locationInput ? locationInput.value.trim() : "";
       const streamVal = streamSelect ? streamSelect.value.trim() : "";
+
+      if (!slotVal || !cityVal) {
+        switchToSelectFlow();
+        if (errorBox) {
+          errorBox.innerHTML = "Please choose your location and an available slot.";
+          errorBox.style.display = "block";
+        }
+        if (citySelectEl) citySelectEl.focus();
+        return;
+      }
 
       if (!streamVal) {
         if (errorBox) {
@@ -725,15 +845,6 @@ function initRegistrationModal() {
         return;
       }
 
-      if (!slotVal) {
-        if (errorBox) {
-          errorBox.innerHTML = "Please select an available slot.";
-          errorBox.style.display = "block";
-        }
-        if (slotSelect) slotSelect.focus();
-        return;
-      }
-
       const params = new URLSearchParams(window.location.search);
       const inviteCode = params.get("invite_code") || getParam("invite_code", "") || "";
 
@@ -741,9 +852,11 @@ function initRegistrationModal() {
         name: nameInput ? nameInput.value.trim() : "",
         mobile: normalizedMobile,
         college: collegeInput ? collegeInput.value.trim() : "",
-        college_location: locationVal,
-        location: locationVal,
-        address: locationVal,
+        college_location: locationVal || cityVal,
+        location: cityVal,
+        bootcamp_city: cityVal,
+        city: cityVal,
+        address: locationVal || cityVal,
         standard: standardRadio ? standardRadio.value : "",
         educational_stream: streamVal,
         stream: streamVal,
@@ -853,7 +966,7 @@ function initRegistrationModal() {
             // Short visual feedback before displaying the official digital pass
             await new Promise(r => setTimeout(r, 600));
 
-            showSuccessModal(payload.name, finalPassId, slotVal);
+            showSuccessModal(payload.name, finalPassId, slotVal, cityVal);
             form.reset();
             populateHiddenFields();
             if (btn) {
@@ -886,17 +999,19 @@ function initRegistrationModal() {
 }
 
 // Stage 2: Displays the Verified Entry Pass in the modal
-function showSuccessModal(studentName, passId, slot) {
+function showSuccessModal(studentName, passId, slot, city) {
   const cleanName = (studentName || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || generateRandomPassId()).trim().toUpperCase();
   const cleanSlot = (slot || registeredStudentState.slot || getUpcomingSundays()[0] || '').trim();
+  const cleanCity = (city || registeredStudentState.city || 'Offline').trim();
 
   registeredStudentState.name = cleanName;
   registeredStudentState.passId = cleanId;
   registeredStudentState.slot = cleanSlot;
+  registeredStudentState.city = cleanCity;
   registeredStudentState.date = formatPassDateFromSlot(cleanSlot).replace(/\s*·\s*OFFLINE/i, '');
 
-  updatePassDisplay(cleanName, cleanId, cleanSlot);
+  updatePassDisplay(cleanName, cleanId, cleanSlot, cleanCity);
   updateDynamicWhatsAppCommunityLink();
 
   const modal = document.getElementById('registration-modal');
@@ -923,9 +1038,10 @@ function checkVerifiedRegistrationResponse() {
   const studentName = urlParams.get('name') || urlParams.get('student_name');
   const passId = urlParams.get('pass_id') || urlParams.get('id');
   const slot = urlParams.get('available_slot') || urlParams.get('slot') || urlParams.get('available_slots');
+  const city = urlParams.get('city') || urlParams.get('location');
 
   if (hasRegistered && studentName) {
-    showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId(), slot ? decodeURIComponent(slot) : '');
+    showSuccessModal(decodeURIComponent(studentName), passId ? decodeURIComponent(passId) : generateRandomPassId(), slot ? decodeURIComponent(slot) : '', city ? decodeURIComponent(city) : '');
   }
 }
 
@@ -940,16 +1056,22 @@ function generateRandomPassId() {
 }
 
 // Updates entry pass DOM with 100% dynamic registration data
-function updatePassDisplay(name, passId, slot) {
+function updatePassDisplay(name, passId, slot, city) {
   const cleanName = (name || registeredStudentState.name || 'CLASS 12 PARTICIPANT').trim().toUpperCase();
   const cleanId = (passId || registeredStudentState.passId || 'BOOTCAMP-A7K9').trim().toUpperCase();
   const chosenSlot = (slot || registeredStudentState.slot || getUpcomingSundays()[0] || '').trim();
+  const cleanCity = (city || registeredStudentState.city || 'Offline').trim();
 
   const displayDate = formatPassDateFromSlot(chosenSlot);
 
   const dateHolders = document.querySelectorAll('.dynamic-pass-date, .pass-date-val');
   dateHolders.forEach(el => {
     el.textContent = displayDate;
+  });
+
+  const venueHolders = document.querySelectorAll('.dynamic-pass-venue');
+  venueHolders.forEach(el => {
+    el.textContent = `🏛️ ${cleanCity} Offline Centre`;
   });
 
   const nameHolders = document.querySelectorAll('.dynamic-student-name');
@@ -1305,7 +1427,7 @@ function drawPassCanvasElements(ctx, logoImg, width, height, padX, innerW, heade
   ctx.fillStyle = '#334155';
   ctx.font = '750 14px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('🏛️ Sri Sai Nagar, Madhapur, Hyderabad   •   VALID ENTRY PASS', width / 2, stripY + 31);
+  ctx.fillText(`🏛️ ${registeredStudentState.city || 'Offline'} Learning Centre   •   VALID ENTRY PASS`, width / 2, stripY + 31);
 
   ctx.restore();
 
@@ -1341,7 +1463,7 @@ function initCalendarGenerator() {
       e.preventDefault();
       const title = encodeURIComponent('NIAT Free Offline AI Bootcamp (Class 12)');
       const details = encodeURIComponent('Free Offline AI Bootcamp for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
-      const location = encodeURIComponent('Sri Sai Nagar, Madhapur, Hyderabad');
+      const location = encodeURIComponent(`${registeredStudentState.city || 'NIAT'} Offline Learning Centre`);
       
       const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
       window.open(gCalUrl, '_blank');
@@ -1358,7 +1480,7 @@ function initWhatsAppShare() {
       e.preventDefault();
       const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
       const activeCommunity = getActiveWhatsAppCommunityLink();
-      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students in Hyderabad (${shareDateStr} at Sri Sai Nagar, Madhapur, Hyderabad)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: ${activeCommunity}`;
+      const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students (${shareDateStr} at ${registeredStudentState.city || 'Offline'} Learning Centre)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: ${activeCommunity}`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
     });
@@ -1673,8 +1795,10 @@ function initMobileScrollPopups() {
   }
 
   if (ctaBtn2) {
-    ctaBtn2.addEventListener('click', () => {
+    ctaBtn2.addEventListener('click', (e) => {
+      e.preventDefault();
       closePopup2();
+      openRegistrationFormModal();
     });
   }
 

@@ -186,6 +186,31 @@ function doPost(e) {
     var masterRow = buildRowForSheet(master, rowRecord);
     master.appendRow(masterRow);
 
+    // Location-specific sub-sheet write (Hyderabad vs Bengaluru)
+    var chosenCity = (data.bootcamp_city || data.city || data.location || "").toString().trim().toLowerCase();
+    var cityGid = null;
+    var citySheetName = null;
+
+    if (chosenCity.indexOf("hyderabad") !== -1) {
+      cityGid = 734940209;
+      citySheetName = "Hyderabad";
+    } else if (chosenCity.indexOf("bengaluru") !== -1 || chosenCity.indexOf("bangalore") !== -1) {
+      cityGid = 1146976817;
+      citySheetName = "Bengaluru";
+    }
+
+    if (cityGid || citySheetName) {
+      try {
+        var citySheet = getSheetByGidOrName(ss, cityGid, citySheetName);
+        if (citySheet) {
+          var cityRow = buildRowForSheet(citySheet, rowRecord);
+          citySheet.appendRow(cityRow);
+        }
+      } catch (locErr) {
+        console.warn("Location sub-sheet write warning:", locErr);
+      }
+    }
+
     // Channel-specific sheet write
     var channel = normalizeChannelName(
       data.utm_source || "direct"
@@ -199,7 +224,7 @@ function doPost(e) {
     var channelRow = buildRowForSheet(channelSheet, rowRecord);
     channelSheet.appendRow(channelRow);
 
-    // Return success only after both Sheet writes succeed
+    // Return success only after Sheet writes succeed
     return jsonResponse({
       success: true,
       passId: passId
@@ -329,6 +354,32 @@ function buildRowForSheet(sheet, record) {
   }
 
   return row;
+}
+
+function getSheetByGidOrName(ss, gid, fallbackName) {
+  var sheets = ss.getSheets();
+  if (gid) {
+    for (var i = 0; i < sheets.length; i++) {
+      if (sheets[i].getSheetId() == gid) {
+        ensureSheetHeaders(sheets[i]);
+        return sheets[i];
+      }
+    }
+  }
+  if (fallbackName) {
+    var sheetByName = ss.getSheetByName(fallbackName);
+    if (sheetByName) {
+      ensureSheetHeaders(sheetByName);
+      return sheetByName;
+    }
+    for (var j = 0; j < sheets.length; j++) {
+      if (sheets[j].getName().trim().toLowerCase() === fallbackName.trim().toLowerCase()) {
+        ensureSheetHeaders(sheets[j]);
+        return sheets[j];
+      }
+    }
+  }
+  return getOrCreateSheet(ss, fallbackName || ("Sheet_" + gid));
 }
 
 function getOrCreateSheet(ss, name) {
