@@ -305,17 +305,39 @@ function populateDynamicSlots() {
   });
 }
 
-// CHANGE 2 — WHATSAPP COMMUNITY LINK (Community 6)
-const WHATSAPP_COMMUNITY_4 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
-const WHATSAPP_COMMUNITY_5 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
-const WHATSAPP_COMMUNITY_6 = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
+// Location-Based WhatsApp Community Links
+const WHATSAPP_COMMUNITY_HYDERABAD = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
+const WHATSAPP_COMMUNITY_BENGALURU = "https://chat.whatsapp.com/GEm9W1G6eUu4uPTO7NJoAO";
 
-function getActiveWhatsAppCommunityLink(baseDate) {
-  return WHATSAPP_COMMUNITY_6;
+// Legacy fallbacks for compatibility
+const WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_HYDERABAD;
+const WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_HYDERABAD;
+const WHATSAPP_COMMUNITY_6 = WHATSAPP_COMMUNITY_HYDERABAD;
+
+function getActiveWhatsAppCommunityLink(cityOrDate) {
+  let targetCity = "";
+  if (typeof cityOrDate === 'string' && cityOrDate.trim() !== '') {
+    targetCity = cityOrDate.trim().toLowerCase();
+  } else {
+    const hiddenCity = document.getElementById("reg_selected_city");
+    const cityInput = document.getElementById("reg_bootcamp_city");
+    if (hiddenCity && hiddenCity.value && hiddenCity.value.trim() !== '') {
+      targetCity = hiddenCity.value.trim().toLowerCase();
+    } else if (cityInput && cityInput.value && cityInput.value.trim() !== '') {
+      targetCity = cityInput.value.trim().toLowerCase();
+    } else if (registeredStudentState && registeredStudentState.city && registeredStudentState.city.trim() !== '') {
+      targetCity = registeredStudentState.city.toString().trim().toLowerCase();
+    }
+  }
+
+  if (targetCity.indexOf("bengaluru") !== -1 || targetCity.indexOf("bangalore") !== -1) {
+    return WHATSAPP_COMMUNITY_BENGALURU;
+  }
+  return WHATSAPP_COMMUNITY_HYDERABAD;
 }
 
-function updateDynamicWhatsAppCommunityLink() {
-  const activeLink = getActiveWhatsAppCommunityLink();
+function updateDynamicWhatsAppCommunityLink(city) {
+  const activeLink = getActiveWhatsAppCommunityLink(city);
   const communityBtns = document.querySelectorAll('.btn-whatsapp-community');
   communityBtns.forEach(btn => {
     btn.href = activeLink;
@@ -341,6 +363,8 @@ function initRealtimeCutoffChecker() {
 
 // Attach helpers to window for easy inspection and testing
 if (typeof window !== 'undefined') {
+  window.WHATSAPP_COMMUNITY_HYDERABAD = WHATSAPP_COMMUNITY_HYDERABAD;
+  window.WHATSAPP_COMMUNITY_BENGALURU = WHATSAPP_COMMUNITY_BENGALURU;
   window.WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_4;
   window.WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_5;
   window.WHATSAPP_COMMUNITY_6 = WHATSAPP_COMMUNITY_6;
@@ -351,6 +375,8 @@ if (typeof window !== 'undefined') {
   window.updateDynamicWhatsAppCommunityLink = updateDynamicWhatsAppCommunityLink;
   window.initRegistrationModal = initRegistrationModal;
   window.openRegistrationFormModal = openRegistrationFormModal;
+  window.registeredStudentState = registeredStudentState;
+  window.showSuccessModal = showSuccessModal;
 }
 
 // ============================================================================
@@ -610,8 +636,10 @@ function initRegistrationModal() {
     citySelect.addEventListener("change", function () {
       const chosenCity = citySelect.value;
       if (chosenCity) {
+        registeredStudentState.city = chosenCity;
         if (slotFlowWrapper) slotFlowWrapper.style.display = 'block';
         populateDynamicSlots();
+        updateDynamicWhatsAppCommunityLink(chosenCity);
         if (slotSelect) {
           slotSelect.value = "";
           slotSelect.focus();
@@ -634,6 +662,7 @@ function initRegistrationModal() {
         if (summarySlot) summarySlot.textContent = "📅 " + chosenSlot;
         registeredStudentState.city = chosenCity;
         registeredStudentState.slot = chosenSlot;
+        updateDynamicWhatsAppCommunityLink(chosenCity);
 
         // Auto-advance seamlessly without next button
         if (selectFlow) selectFlow.style.display = 'none';
@@ -953,7 +982,7 @@ function showSuccessModal(studentName, passId, slot, city) {
   registeredStudentState.date = formatPassDateFromSlot(cleanSlot).replace(/\s*·\s*OFFLINE/i, '');
 
   updatePassDisplay(cleanName, cleanId, cleanSlot, cleanCity);
-  updateDynamicWhatsAppCommunityLink();
+  updateDynamicWhatsAppCommunityLink(cleanCity);
 
   const modal = document.getElementById('registration-modal');
   const stepForm = document.getElementById('modal-step-form');
@@ -1420,7 +1449,7 @@ function initWhatsAppShare() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const shareDateStr = registeredStudentState.date || formatPassDateFromSlot(getUpcomingSundays()[0]).replace(/\s*·\s*OFFLINE/i, '');
-      const activeCommunity = getActiveWhatsAppCommunityLink();
+      const activeCommunity = getActiveWhatsAppCommunityLink(registeredStudentState.city);
       const message = `Hey! I just registered for the free *NIAT Offline AI Bootcamp* for Class 12 students (${shareDateStr} at ${registeredStudentState.city || 'Offline'} Learning Centre)! 🚀\n\nThey're teaching AI for board exams, revision, NotebookLM, and live project building. Join the WhatsApp Community here: ${activeCommunity}`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
