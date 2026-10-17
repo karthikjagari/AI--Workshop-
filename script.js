@@ -344,6 +344,46 @@ function updateDynamicWhatsAppCommunityLink(city) {
   });
 }
 
+// Exact Centre Locations & Physical Addresses
+const VENUE_DETAILS = {
+  Hyderabad: {
+    city: "Hyderabad",
+    name: "Hyderabad Centre",
+    address: "Block-B, 3rd Floor, Premier Building, Sri Sai Nagar, Madhapur, Hyderabad"
+  },
+  Bengaluru: {
+    city: "Bengaluru",
+    name: "Bengaluru Centre",
+    address: "NIAT Yenepoya Bangalore University, Thanisandra Main Rd, Kannuru, Bengaluru, Karnataka"
+  }
+};
+
+function getVenueDetails(city) {
+  const clean = (city || '').toString().trim().toLowerCase();
+  if (clean.includes('bengaluru') || clean.includes('bangalore')) {
+    return VENUE_DETAILS.Bengaluru;
+  }
+  return VENUE_DETAILS.Hyderabad;
+}
+
+function updateCentreAddressDisplay(city) {
+  const addressBox = document.getElementById('reg_centre_address_box');
+  const nameEl = document.getElementById('reg_centre_name');
+  const textEl = document.getElementById('reg_centre_address');
+  if (!addressBox) return;
+
+  const clean = (city || '').toString().trim();
+  if (!clean) {
+    addressBox.style.display = 'none';
+    return;
+  }
+
+  const venue = getVenueDetails(clean);
+  if (nameEl) nameEl.textContent = `📍 ${venue.name}`;
+  if (textEl) textEl.textContent = venue.address;
+  addressBox.style.display = 'block';
+}
+
 // Live real-time cutoff checker (if page remains open across cutoff)
 function initRealtimeCutoffChecker() {
   setInterval(() => {
@@ -368,6 +408,9 @@ if (typeof window !== 'undefined') {
   window.WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_4;
   window.WHATSAPP_COMMUNITY_5 = WHATSAPP_COMMUNITY_5;
   window.WHATSAPP_COMMUNITY_6 = WHATSAPP_COMMUNITY_6;
+  window.VENUE_DETAILS = VENUE_DETAILS;
+  window.getVenueDetails = getVenueDetails;
+  window.updateCentreAddressDisplay = updateCentreAddressDisplay;
   window.getNextBiweeklyBootcampDate = getNextBiweeklyBootcampDate;
   window.getUpcomingSundays = getUpcomingSundays;
   window.getActiveWhatsAppCommunityLink = getActiveWhatsAppCommunityLink;
@@ -463,6 +506,11 @@ function openRegistrationFormModal() {
   // Refresh dynamic slots & WhatsApp link on modal open
   populateDynamicSlots();
   updateDynamicWhatsAppCommunityLink();
+  if (citySelect && citySelect.value) {
+    updateCentreAddressDisplay(citySelect.value);
+  } else {
+    updateCentreAddressDisplay('');
+  }
 
   if (modal) {
     if (stepForm) stepForm.style.display = 'block';
@@ -625,8 +673,10 @@ function initRegistrationModal() {
     if (citySelect) {
       if (citySelect.value) {
         if (slotFlowWrapper) slotFlowWrapper.style.display = 'block';
+        updateCentreAddressDisplay(citySelect.value);
       } else {
         if (slotFlowWrapper) slotFlowWrapper.style.display = 'none';
+        updateCentreAddressDisplay('');
       }
     }
   }
@@ -640,12 +690,14 @@ function initRegistrationModal() {
         if (slotFlowWrapper) slotFlowWrapper.style.display = 'block';
         populateDynamicSlots();
         updateDynamicWhatsAppCommunityLink(chosenCity);
+        updateCentreAddressDisplay(chosenCity);
         if (slotSelect) {
           slotSelect.value = "";
           slotSelect.focus();
         }
       } else {
         if (slotFlowWrapper) slotFlowWrapper.style.display = 'none';
+        updateCentreAddressDisplay('');
       }
     });
   }
@@ -656,13 +708,16 @@ function initRegistrationModal() {
       const chosenSlot = slotSelect.value;
       const chosenCity = citySelect ? citySelect.value : "Hyderabad";
       if (chosenSlot && chosenCity) {
+        const venueInfo = getVenueDetails(chosenCity);
         if (hiddenCityInput) hiddenCityInput.value = chosenCity;
         if (hiddenSlotInput) hiddenSlotInput.value = chosenSlot;
-        if (summaryCity) summaryCity.textContent = "📍 " + chosenCity + " Centre";
+        if (summaryCity) summaryCity.textContent = "📍 " + venueInfo.name;
         if (summarySlot) summarySlot.textContent = "📅 " + chosenSlot;
         registeredStudentState.city = chosenCity;
         registeredStudentState.slot = chosenSlot;
+        registeredStudentState.venue = `${venueInfo.name} (${venueInfo.address})`;
         updateDynamicWhatsAppCommunityLink(chosenCity);
+        updateCentreAddressDisplay(chosenCity);
 
         // Auto-advance seamlessly without next button
         if (selectFlow) selectFlow.style.display = 'none';
@@ -1039,9 +1094,11 @@ function updatePassDisplay(name, passId, slot, city) {
     el.textContent = displayDate;
   });
 
+  const venueDetails = getVenueDetails(cleanCity);
   const venueHolders = document.querySelectorAll('.dynamic-pass-venue');
   venueHolders.forEach(el => {
-    el.textContent = `🏛️ ${cleanCity} Offline Centre`;
+    el.textContent = `🏛️ ${venueDetails.name}`;
+    el.title = venueDetails.address;
   });
 
   const nameHolders = document.querySelectorAll('.dynamic-student-name');
@@ -1433,7 +1490,8 @@ function initCalendarGenerator() {
       e.preventDefault();
       const title = encodeURIComponent('NIAT Free Offline AI Bootcamp (Class 12)');
       const details = encodeURIComponent('Free Offline AI Bootcamp for Class 12 students. Learn practical AI for board exams, revision, NotebookLM, prompting, and build a hands-on project. Timing: 10:00 AM - 5:00 PM. Entry Pass ID: ' + registeredStudentState.passId);
-      const location = encodeURIComponent(`${registeredStudentState.city || 'NIAT'} Offline Learning Centre`);
+      const venueDetails = getVenueDetails(registeredStudentState.city);
+      const location = encodeURIComponent(`${venueDetails.name}, ${venueDetails.address}`);
       
       const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
       window.open(gCalUrl, '_blank');
