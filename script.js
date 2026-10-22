@@ -306,8 +306,8 @@ function populateDynamicSlots() {
 }
 
 // Location-Based WhatsApp Community Links
-const WHATSAPP_COMMUNITY_HYDERABAD = "https://chat.whatsapp.com/Bvn18wRL71KKmjwYCCOfeD";
-const WHATSAPP_COMMUNITY_BENGALURU = "https://chat.whatsapp.com/GEm9W1G6eUu4uPTO7NJoAO";
+const WHATSAPP_COMMUNITY_HYDERABAD = "https://chat.whatsapp.com/EpRjJmjS5nt6iTFmeDsLcq";
+const WHATSAPP_COMMUNITY_BENGALURU = "https://chat.whatsapp.com/LxnMdv7CBDz5Jn990JQw0n";
 
 // Legacy fallbacks for compatibility
 const WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_HYDERABAD;
@@ -379,7 +379,7 @@ function updateCentreAddressDisplay(city) {
   }
 
   const venue = getVenueDetails(clean);
-  if (nameEl) nameEl.textContent = `📍 ${venue.name}`;
+  if (nameEl) nameEl.textContent = venue.name;
   if (textEl) textEl.textContent = venue.address;
   addressBox.style.display = 'block';
 }
