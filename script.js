@@ -306,8 +306,8 @@ function populateDynamicSlots() {
 }
 
 // Location-Based WhatsApp Community Links
-const WHATSAPP_COMMUNITY_HYDERABAD = "https://chat.whatsapp.com/EpRjJmjS5nt6iTFmeDsLcq";
-const WHATSAPP_COMMUNITY_BENGALURU = "https://chat.whatsapp.com/LxnMdv7CBDz5Jn990JQw0n";
+const WHATSAPP_COMMUNITY_HYDERABAD = "https://chat.whatsapp.com/F9RIJaSqivv4NXTlo6OQcF";
+const WHATSAPP_COMMUNITY_BENGALURU = "https://chat.whatsapp.com/BMI0saELuLzC0q31uWWs8C";
 
 // Legacy fallbacks for compatibility
 const WHATSAPP_COMMUNITY_4 = WHATSAPP_COMMUNITY_HYDERABAD;
